@@ -1,5 +1,8 @@
 # FastAPI and NiceGUI Full-Stack
 
+
+KHÔNG AI PUSH THẲNG LÊN MAIN NHÉ :33
+
 This repository provides a template for building full-stack web applications using **FastAPI** for the backend and **NiceGUI** for the frontend. It includes a complete setup for a PostgreSQL database, JWT authentication, and a clean project structure, making it an excellent starting point for demos, prototypes, and internal tools.
 
 ## Why FastAPI and NiceGUI?
