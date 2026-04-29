@@ -1,0 +1,12 @@
+Cách insert tiếng nhật không lỗi:
+vào ổ mình cài psql
+
+chcp 65001
+set PGCLIENTENCODING=UTF8
+echo %PGCLIENTENCODING% ( ra UTF8 là oki)
+psql "postgresql://username:password@host:port/defaultdb?sslmode=require"
+
+=> SHOW client_encoding; (UTF8 là oki)
+
+bản thân server aivien đã có hỗ trợ UTF8 rồi nên về cơ bản lưu được nihongo và tiêgns việt có dấu
+cái cần set lại là client (psql) trên máy từ win123 j đó sang UTF8 là được nhé, lúc ý insert data không bị lỗi
