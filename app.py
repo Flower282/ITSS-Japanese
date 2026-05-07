@@ -1,7 +1,11 @@
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 from nicegui import app, ui
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.backend.endpoints import login, users, items
+from src.backend.endpoints import items, login, translate_routes, users
 from src.core.config import settings
 from src.db import init_db
 
@@ -15,6 +19,7 @@ from src.frontend.pages import (
     translation_page,
     analysis_page,
     culture_page,
+    translate_test_page,
 )
 
 
@@ -47,6 +52,7 @@ app.add_middleware(
 app.include_router(login.router, tags=["login"])
 app.include_router(users.router, prefix="/api/v1", tags=["users"])
 app.include_router(items.router, prefix="/api/v1", tags=["items"])
+app.include_router(translate_routes.router, prefix="/api/v1/translate", tags=["translate"])
 
 if __name__ in {"__main__", "__mp_main__"}:
     ui.run(
