@@ -12,6 +12,9 @@ from src.frontend.pages import (
     dashboard_page,
     items as items_page,
     login as login_page,
+    translation_page,
+    analysis_page,
+    culture_page,
 )
 
 
