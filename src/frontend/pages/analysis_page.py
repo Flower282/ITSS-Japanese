@@ -1,7 +1,12 @@
 from __future__ import annotations
 
-from nicegui import ui
+import json
+from typing import Any
 
+from nicegui import ui
+from sqlmodel import Session, select
+
+from src.db.session import engine
 from src.frontend.components.components import (
     action_button,
     checklist_panel,
@@ -10,80 +15,196 @@ from src.frontend.components.components import (
 )
 from src.frontend.layouts.layout import base_layout
 from src.frontend.ui_state import UiState
+from src.models.analysis_models import ConversationAnalysis
 
 
-@ui.page("/analysis")
-def analysis_page() -> None:
+def empty_analysis_payload() -> dict[str, Any]:
+    return {
+        "id": None,
+        "meeting_title": "Chưa có phân tích hội thoại",
+        "meeting_date": "",
+        "metrics": [
+            {
+                "title": "THỜI LƯỢNG",
+                "value": "0",
+                "subtitle": "Phút tương tác",
+                "accent_classes": "border-blue-100 bg-blue-50",
+                "value_classes": "text-blue-600",
+            },
+            {
+                "title": "ĐỘ HIỂU",
+                "value": "0%",
+                "subtitle": "Chưa có dữ liệu",
+                "accent_classes": "border-emerald-100 bg-emerald-50",
+                "value_classes": "text-emerald-600",
+            },
+            {
+                "title": "CẢM XÚC CHUNG",
+                "value": "N/A",
+                "subtitle": "Chưa có dữ liệu",
+                "accent_classes": "border-purple-100 bg-purple-50",
+                "value_classes": "text-purple-600",
+            },
+        ],
+        "ai_overall_feedback": "Chưa có dữ liệu phân tích. Hãy tạo hoặc phân tích một hội thoại trước.",
+        "perception_gaps": [],
+        "decisions": [],
+        "action_items": [],
+    }
+
+
+def normalize_gap(gap: dict[str, Any]) -> dict[str, Any]:
+    severity = gap.get("severity", "THẤP")
+
+    if severity == "CAO":
+        default_severity_classes = "bg-rose-500 text-white"
+        default_card_classes = "w-full rounded-2xl border border-rose-100 bg-rose-50/60 p-4"
+    elif severity == "TRUNG BÌNH":
+        default_severity_classes = "bg-amber-500 text-white"
+        default_card_classes = "w-full rounded-2xl border border-amber-100 bg-amber-50/60 p-4"
+    else:
+        default_severity_classes = "bg-emerald-500 text-white"
+        default_card_classes = "w-full rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4"
+
+    return {
+        "title": gap.get("title", "Vấn đề chưa đặt tên"),
+        "severity": severity,
+        "severity_classes": gap.get("severity_classes") or default_severity_classes,
+        "card_classes": gap.get("card_classes") or default_card_classes,
+        "left_title": gap.get("left_title", "VN QUAN ĐIỂM VIỆT NAM"),
+        "left_text": gap.get("left_text") or gap.get("vn_view", ""),
+        "right_title": gap.get("right_title", "JP QUAN ĐIỂM NHẬT BẢN"),
+        "right_text": gap.get("right_text") or gap.get("jp_view", ""),
+        "recommendation": gap.get("recommendation", ""),
+    }
+
+
+def analysis_to_search_text(row: ConversationAnalysis) -> str:
+    payload = {
+        "meeting_title": row.meeting_title,
+        "meeting_date": row.meeting_date,
+        "duration_minutes": row.duration_minutes,
+        "transcript": row.transcript,
+        "understanding_score": row.understanding_score,
+        "overall_sentiment": row.overall_sentiment,
+        "ai_overall_feedback": row.ai_overall_feedback,
+        "metrics": row.metrics,
+        "perception_gaps": row.perception_gaps,
+        "decisions": row.decisions,
+        "action_items": row.action_items,
+    }
+
+    return json.dumps(payload, ensure_ascii=False).lower()
+
+
+def find_first_analysis_by_keyword(keyword: str) -> ConversationAnalysis | None:
+    keyword = keyword.strip().lower()
+
+    if not keyword:
+        return None
+
+    with Session(engine) as session:
+        statement = (
+            select(ConversationAnalysis)
+            .order_by(ConversationAnalysis.created_at.desc())
+            .limit(200)
+        )
+        rows = session.exec(statement).all()
+
+        for row in rows:
+            if keyword in analysis_to_search_text(row):
+                return row
+
+    return None
+
+
+def row_to_payload(row: ConversationAnalysis) -> dict[str, Any]:
+    return {
+        "id": row.id,
+        "meeting_title": row.meeting_title,
+        "meeting_date": row.meeting_date or "",
+        "metrics": row.metrics or [],
+        "ai_overall_feedback": row.ai_overall_feedback,
+        "perception_gaps": [
+            normalize_gap(gap) for gap in (row.perception_gaps or [])
+        ],
+        "decisions": row.decisions or [],
+        "action_items": row.action_items or [],
+    }
+
+
+def load_analysis(analysis_id: int | None = None) -> dict[str, Any]:
+    try:
+        with Session(engine) as session:
+            if analysis_id is not None:
+                row = session.get(ConversationAnalysis, analysis_id)
+
+                if not row:
+                    return empty_analysis_payload()
+
+                return row_to_payload(row)
+
+            statement = (
+                select(ConversationAnalysis)
+                .order_by(ConversationAnalysis.created_at.desc())
+                .limit(1)
+            )
+            row = session.exec(statement).first()
+
+            if not row:
+                return empty_analysis_payload()
+
+            return row_to_payload(row)
+
+    except Exception as e:
+        print(f"Cannot load analysis: {e}")
+        return empty_analysis_payload()
+
+
+def render_analysis_page(analysis_id: int | None = None) -> None:
     layout_state = UiState()
+    data = load_analysis(analysis_id)
 
-    metrics = [
-        {
-            "title": "THỜI LƯỢNG",
-            "value": "45",
-            "subtitle": "Phút tương tác",
-            "accent_classes": "border-blue-100 bg-blue-50",
-            "value_classes": "text-blue-600",
-        },
-        {
-            "title": "ĐỘ HIỂU",
-            "value": "87%",
-            "subtitle": "Truyền đạt chính xác",
-            "accent_classes": "border-emerald-100 bg-emerald-50",
-            "value_classes": "text-emerald-600",
-        },
-        {
-            "title": "CẢM XÚC CHUNG",
-            "value": "Tốt",
-            "subtitle": "Tích cực & Xây dựng",
-            "accent_classes": "border-purple-100 bg-purple-50",
-            "value_classes": "text-purple-600",
-        },
+    current_id = data.get("id")
+    metrics = data["metrics"]
+    perception_gaps = data["perception_gaps"]
+    decisions = data["decisions"] or [
+        "Chưa phát hiện quyết định chính nào trong hội thoại."
     ]
+    action_items = data["action_items"] or ["Chưa có action items."]
+    ai_overall_feedback = data["ai_overall_feedback"]
 
-    perception_gaps = [
-        {
-            "title": "Deadline dự án",
-            "severity": "CAO",
-            "severity_classes": "bg-rose-500 text-white",
-            "left_title": "VN QUAN ĐIỂM VIỆT NAM",
-            "left_text": "Hiểu là deadline có thể linh hoạt",
-            "right_title": "JP QUAN ĐIỂM NHẬT BẢN",
-            "right_text": "Deadline là tuyệt đối cần tuân thủ",
-            "recommendation": "Cần xác nhận lại deadline cụ thể và cam kết rõ ràng",
-        },
-        {
-            "title": "Cách nhận phản hồi",
-            "severity": "TRUNG BÌNH",
-            "severity_classes": "bg-amber-500 text-white",
-            "left_title": "VN QUAN ĐIỂM VIỆT NAM",
-            "left_text": "Ưu tiên lời nhắc nhẹ và linh hoạt",
-            "right_title": "JP QUAN ĐIỂM NHẬT BẢN",
-            "right_text": "Ưu tiên phản hồi rõ ràng và đúng hạn",
-            "recommendation": "Nên đưa cam kết thời gian phản hồi cụ thể",
-        },
-    ]
-
-    decisions = [
-        "Gia hạn deadline đến ngày 15/4",
-        "Tăng cường họp hàng ngày vào 9:00 AM",
-        "Phân công Sato-san hỗ trợ phần UI",
-    ]
-
-    action_items = [
-        "Bạn: Gửi báo cáo tiến độ trước 5 PM hôm nay",
-        "Tanaka-san: Xác nhận phạm vi yêu cầu mới",
-        "Cả nhóm: Chốt lại timeline trong buổi họp ngày mai",
-    ]
+    meeting_title = data["meeting_title"]
+    meeting_date = data.get("meeting_date") or ""
+    subtitle = f"{meeting_title} - {meeting_date}" if meeting_date else meeting_title
 
     def handle_new_conversation() -> None:
         ui.navigate.to("/translate")
 
     def handle_export() -> None:
-        ui.notify("Đã xuất báo cáo PDF.", type="positive")
+        if not current_id:
+            ui.notify("Chưa có dữ liệu phân tích để xuất PDF.", type="warning")
+            return
+
+        ui.notify("Đang tạo báo cáo PDF...", type="info")
+        ui.run_javascript(
+            f'window.open("/api/analysis/{current_id}/export-pdf", "_blank")'
+        )
 
     def handle_search(value: str) -> None:
-        if value:
-            ui.notify(f"Đang tìm: {value}", type="info")
+        keyword = value.strip()
+
+        if not keyword:
+            return
+
+        row = find_first_analysis_by_keyword(keyword)
+
+        if not row or row.id is None:
+            ui.notify("Không tìm thấy kết quả phù hợp", type="warning")
+            return
+
+        ui.notify(f"Tìm thấy: {row.meeting_title}", type="positive")
+        ui.navigate.to(f"/analysis/{row.id}")
 
     def handle_locale_click() -> None:
         ui.notify("Đã chuyển ngôn ngữ hiển thị.", type="info")
@@ -98,7 +219,7 @@ def analysis_page() -> None:
         with ui.row().classes("w-full items-center justify-between"):
             page_title_block(
                 title="Phân tích hội thoại",
-                subtitle="Cuộc họp với Tanaka-san - 10/04/2026",
+                subtitle=subtitle,
             )
             action_button(
                 label="Xuất báo cáo PDF",
@@ -118,17 +239,12 @@ def analysis_page() -> None:
                 )
                 with icon_box:
                     ui.icon("psychology")
+
                 with ui.column().classes("gap-1"):
                     ui.label("Nhận xét tổng quan từ AI").classes(
                         "text-sm font-semibold text-slate-800"
                     )
-                    ui.label(
-                        "Cuộc họp diễn ra tích cực với mức độ hiểu biết lẫn nhau là 87%. "
-                        "Tuy nhiên, có một số điểm cần lưu ý về sự khác biệt trong nhận thức "
-                        "về deadline và cách giao tiếp. Khuyến nghị tăng cường xác nhận rõ "
-                        "các cam kết và sử dụng ngôn ngữ lịch sự, gián tiếp hơn khi giao tiếp "
-                        "với đồng nghiệp Nhật Bản."
-                    ).classes("text-sm text-slate-600")
+                    ui.label(ai_overall_feedback).classes("text-sm text-slate-600")
 
         with ui.row().classes("w-full items-start gap-6"):
             with ui.column().classes("flex-1 gap-4"):
@@ -136,9 +252,20 @@ def analysis_page() -> None:
                     "text-sm font-semibold text-slate-700"
                 )
 
+                if not perception_gaps:
+                    with ui.element("div").classes(
+                        "w-full rounded-2xl border border-slate-100 bg-white p-4"
+                    ):
+                        ui.label("Chưa phát hiện điểm lệch nhận thức nào.").classes(
+                            "text-sm text-slate-500"
+                        )
+
                 for gap in perception_gaps:
                     with ui.element("div").classes(
-                        "w-full rounded-2xl border border-rose-100 bg-rose-50/60 p-4"
+                        gap.get(
+                            "card_classes",
+                            "w-full rounded-2xl border border-slate-100 bg-white p-4",
+                        )
                     ):
                         with ui.row().classes("items-start justify-between"):
                             ui.label(gap["title"]).classes(
@@ -180,6 +307,7 @@ def analysis_page() -> None:
                                 ui.label("KHUYẾN NGHỊ AI").classes(
                                     "text-[11px] font-semibold text-blue-600"
                                 )
+
                             ui.label(gap["recommendation"]).classes(
                                 "text-sm text-slate-600 mt-1"
                             )
@@ -194,3 +322,13 @@ def analysis_page() -> None:
                     items=action_items,
                     icon_classes="text-blue-600",
                 )
+
+
+@ui.page("/analysis")
+def analysis_page() -> None:
+    render_analysis_page()
+
+
+@ui.page("/analysis/{analysis_id}")
+def analysis_detail_page(analysis_id: int) -> None:
+    render_analysis_page(analysis_id)

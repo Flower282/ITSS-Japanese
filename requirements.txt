@@ -17,3 +17,4 @@ scipy
 sounddevice
 noisereduce
 python-dotenv
+reportlab 
