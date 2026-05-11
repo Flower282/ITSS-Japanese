@@ -14,52 +14,44 @@ from src.frontend.ui_state import UiState
 
 
 def build_nav_items(active_route: str) -> list[dict]:
-    """Build the default navigation items with an active route."""
     items = [
         {
-            "label": "Tong quan",
+            "label": "Tổng quan",
             "icon": "grid_view",
             "route": "/",
         },
         {
-            "label": "Dich hoi thoai",
+            "label": "Dịch hội thoại",
             "icon": "translate",
             "route": "/translate",
         },
         {
-            "label": "Phan tich hoi thoai",
+            "label": "Phân tích hội thoại",
             "icon": "analytics",
             "route": "/analysis",
         },
         {
-            "label": "Giai thich van hoa",
+            "label": "Giải thích văn hóa",
             "icon": "menu_book",
             "route": "/culture",
         },
     ]
+
     for item in items:
         item["active"] = item["route"] == active_route
+
     return items
 
 
 def default_history_items() -> list[dict]:
-    """Default history list for the sidebar."""
-    return [
-        {
-            "id": "tanaka",
-            "label": "Tanaka-san",
-            "subtitle": "10/04/2026 - Du an moi",
-        },
-        {
-            "id": "yamada",
-            "label": "Yamada-san",
-            "subtitle": "09/04/2026 - Bao cao tuan",
-        },
-    ]
+    """
+    Không dùng data mẫu nữa.
+    Nếu muốn sidebar có lịch sử thật, truyền history_items từ page vào base_layout.
+    """
+    return []
 
 
 def render_background() -> None:
-    """Render the shared gradient background and accent glows."""
     ui.element("div").style(
         "position: fixed; inset: 0; background: linear-gradient(135deg, #F7FAFF, "
         "#F3F7FF 45%, #F0F6FF); z-index: -1;"
@@ -87,13 +79,13 @@ def base_layout(
     on_new_conversation: Callable[[], None] | None = None,
     on_history_select: Callable[[str | int], None] | None = None,
     history_items: list[dict] | None = None,
-    search_placeholder: str = "Tim kiem hoi thoai, phan tich, van hoa...",
+    search_placeholder: str = "Tìm kiếm hội thoại, phân tích, văn hóa...",
     search_history: list[str] | None = None,
-    user_subtitle: str | None = "Nguoi Viet Nam",
+    user_subtitle: str | None = "Người Việt Nam",
 ) -> Iterator[None]:
-    """Shared layout with background, sidebar, and header."""
     if not state.get_auth():
         ui.navigate.to("/login")
+        yield
         return
 
     profile = state.get_profile() or {}
@@ -111,23 +103,28 @@ def base_layout(
     )
 
     nav_items = build_nav_items(active_nav)
-    history_items = history_items or default_history_items()
-    search_history = search_history or ["deadline", "bao cao", "lich su"]
+    history_items = history_items or []
+    search_history = search_history or []
+
     if ui_state.selected_history_id is None and history_items:
         ui_state.selected_history_id = history_items[0]["id"]
 
     def handle_search(value: str) -> None:
-        ui_state.search_query = value
+        keyword = (value or "").strip()
+        ui_state.search_query = keyword
+
         if on_search:
-            on_search(value)
+            on_search(keyword)
 
     def handle_locale_change(value: str) -> None:
         ui_state.locale_code = value
+
         if on_locale_change:
             on_locale_change(value)
 
     def handle_history_select(history_id: str | int) -> None:
         ui_state.selected_history_id = history_id
+
         if on_history_select:
             on_history_select(history_id)
 
@@ -151,13 +148,13 @@ def base_layout(
                     ui.label("TrueTalk").classes("text-lg font-semibold text-blue-700")
 
                 action_button(
-                    label="Hoi thoai moi",
+                    label="Hội thoại mới",
                     icon="add",
                     on_click=handle_new_conversation,
                 ).classes("w-full")
 
                 with ui.column().classes("gap-2"):
-                    ui.label("TINH NANG CHINH").classes(
+                    ui.label("TÍNH NĂNG CHÍNH").classes(
                         "text-xs text-slate-400 tracking-wide"
                     )
                     side_nav_menu(
@@ -166,7 +163,7 @@ def base_layout(
                     )
 
                 history_list_panel(
-                    title="LICH SU",
+                    title="LỊCH SỬ",
                     items=history_items,
                     selected_id=ui_state.selected_history_id,
                     on_select=handle_history_select,
@@ -187,4 +184,5 @@ def base_layout(
                     on_locale_click=on_locale_click,
                     actions=top_bar_actions,
                 )
+
                 yield
