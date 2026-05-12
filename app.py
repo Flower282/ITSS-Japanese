@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+ROOT_DIR = Path(__file__).resolve().parent
+load_dotenv(ROOT_DIR / ".env", override=True)
 
 from nicegui import app, ui
 from fastapi.middleware.cors import CORSMiddleware

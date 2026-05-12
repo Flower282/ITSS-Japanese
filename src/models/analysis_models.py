@@ -1,52 +1,68 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Optional
 
-from sqlalchemy import Column, DateTime, JSON, Text
+from sqlalchemy import Column, Text
 from sqlmodel import Field, SQLModel
 
 from src.core.config import settings
 
 
-class ConversationAnalysis(SQLModel, table=True):
-    __tablename__ = "conversation_analyses"
-    __table_args__ = {"schema": settings.SCHEMA_NAME}
+TABLE_ARGS = {"schema": settings.SCHEMA_NAME}
 
-    id: int | None = Field(default=None, primary_key=True)
 
-    meeting_title: str = Field(index=True)
-    meeting_date: str | None = None
-    duration_minutes: int | None = None
+class AnalysisConversation(SQLModel, table=True):
+    __tablename__ = "conversation"
+    __table_args__ = TABLE_ARGS
 
-    transcript: str = Field(sa_column=Column(Text, nullable=False))
+    conversation_id: Optional[int] = Field(default=None, primary_key=True)
 
-    understanding_score: int = 0
-    overall_sentiment: str = "Trung bình"
-
-    ai_overall_feedback: str = Field(sa_column=Column(Text, nullable=False))
-
-    metrics: list[dict[str, Any]] = Field(
-        default_factory=list,
-        sa_column=Column(JSON, nullable=False),
+    user_id: int = Field(
+        foreign_key=f"{settings.SCHEMA_NAME}.users.user_id"
     )
 
-    perception_gaps: list[dict[str, Any]] = Field(
-        default_factory=list,
-        sa_column=Column(JSON, nullable=False),
+    conversation_name: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None
+
+
+class AnalysisMessage(SQLModel, table=True):
+    __tablename__ = "message"
+    __table_args__ = TABLE_ARGS
+
+    message_id: Optional[int] = Field(default=None, primary_key=True)
+
+    user_id: Optional[int] = Field(
+        default=None,
+        foreign_key=f"{settings.SCHEMA_NAME}.users.user_id",
     )
 
-    decisions: list[str] = Field(
-        default_factory=list,
-        sa_column=Column(JSON, nullable=False),
+    conversation_id: int = Field(
+        foreign_key=f"{settings.SCHEMA_NAME}.conversation.conversation_id"
     )
 
-    action_items: list[str] = Field(
-        default_factory=list,
-        sa_column=Column(JSON, nullable=False),
+    text: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    is_deleted: bool = False
+
+
+class AnalysisLog(SQLModel, table=True):
+    __tablename__ = "ai_log"
+    __table_args__ = TABLE_ARGS
+
+    ai_log_id: Optional[int] = Field(default=None, primary_key=True)
+
+    message_id: Optional[int] = Field(
+        default=None,
+        foreign_key=f"{settings.SCHEMA_NAME}.message.message_id",
     )
 
-    created_at: datetime = Field(
-        default_factory=datetime.utcnow,
-        sa_column=Column(DateTime, nullable=False),
+    conversation_id: int = Field(
+        foreign_key=f"{settings.SCHEMA_NAME}.conversation.conversation_id"
     )
+
+    ai_task_type: str
+    output_text: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=datetime.utcnow)

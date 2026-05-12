@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import inspect
 from contextlib import contextmanager
-from typing import Callable, Iterator
+from typing import Any, Callable, Iterator
 
 from nicegui import ui
 
@@ -73,7 +75,7 @@ def base_layout(
     ui_state: UiState,
     title_slot: Callable[[], None] | None = None,
     top_bar_actions: list[dict] | None = None,
-    on_search: Callable[[str], None] | None = None,
+    on_search: Callable[[str], Any] | None = None,
     on_locale_click: Callable[[], None] | None = None,
     on_locale_change: Callable[[str], None] | None = None,
     on_new_conversation: Callable[[], None] | None = None,
@@ -114,7 +116,10 @@ def base_layout(
         ui_state.search_query = keyword
 
         if on_search:
-            on_search(keyword)
+            result = on_search(keyword)
+
+            if inspect.isawaitable(result):
+                asyncio.create_task(result)
 
     def handle_locale_change(value: str) -> None:
         ui_state.locale_code = value

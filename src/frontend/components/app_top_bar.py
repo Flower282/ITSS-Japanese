@@ -50,7 +50,13 @@ def app_top_bar(
                             ui.element("option").props(f"value={item}")
                 if on_search:
                     search_input.on(
-                        "update:model-value", lambda e: on_search(e.value)
+                        "keydown.enter",
+                        lambda: on_search(search_input.value or ""),
+                    )
+                    search_input.props("append-icon=search")
+                    search_input.on(
+                        "click:append",
+                        lambda: on_search(search_input.value or ""),
                     )
             if title_slot:
                 title_slot()
