@@ -13,6 +13,7 @@ from nicegui import ui
 from src.frontend.components.components import action_button
 from src.frontend.layouts.layout import base_layout
 from src.frontend.ui_state import UiState
+from src.core.i18n import _, get_user_language, validate_language_or_default
 
 
 API_BASE_URL = "/api"
@@ -405,7 +406,7 @@ def render_metric_card(metric: dict[str, Any]) -> None:
                 )
 
 
-def render_feedback_card(ai_overall_feedback: str) -> None:
+def render_feedback_card(ai_overall_feedback: str, lang: str = 'vn') -> None:
     with ui.element("div").classes("analysis-card w-full px-6 py-5"):
         with ui.row().classes("w-full flex-nowrap items-start gap-5"):
             with ui.element("div").classes(
@@ -414,7 +415,7 @@ def render_feedback_card(ai_overall_feedback: str) -> None:
                 ui.icon("psychology").classes("text-lg")
 
             with ui.column().classes("gap-1.5 flex-1 min-w-0"):
-                ui.label("Nhận xét tổng quan từ AI").classes(
+                ui.label(_('ai_overall_feedback_label', lang)).classes(
                     "text-lg font-bold text-slate-800"
                 )
                 render_text(
@@ -423,7 +424,7 @@ def render_feedback_card(ai_overall_feedback: str) -> None:
                 )
 
 
-def render_gap_card(gap: dict[str, Any]) -> None:
+def render_gap_card(gap: dict[str, Any], lang: str = 'vn') -> None:
     with ui.element("div").classes(gap["card_classes"]):
         with ui.row().classes("items-center justify-between gap-3 w-full"):
             render_text(
@@ -463,7 +464,7 @@ def render_gap_card(gap: dict[str, Any]) -> None:
         ):
             with ui.row().classes("items-center gap-2"):
                 ui.icon("tips_and_updates").classes("text-blue-600 text-sm")
-                ui.label("KHUYẾN NGHỊ AI").classes(
+                ui.label(_('ai_recommendation', lang)).classes(
                     "text-[10px] font-bold uppercase tracking-wide text-blue-600"
                 )
 
@@ -494,6 +495,9 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
     add_analysis_css()
 
     layout_state = UiState()
+
+    stored_lang = get_user_language()
+    lang = validate_language_or_default(stored_lang)
 
     state: dict[str, Any] = {
         "data": empty_analysis_payload(),
@@ -564,7 +568,7 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
         ui.navigate.to(f"/analysis/{analysis_id}")
 
     def handle_locale_click() -> None:
-        ui.notify("Đã chuyển ngôn ngữ hiển thị.", type="info")
+        ui.notify(_('switched_lang', lang), type="info")
 
     @ui.refreshable
     def dashboard() -> None:
@@ -588,10 +592,10 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
 
         def handle_export() -> None:
             if not current_id:
-                ui.notify("Chưa có dữ liệu phân tích để xuất PDF.", type="warning")
+                ui.notify(_('no_data_export', lang), type="warning")
                 return
 
-            ui.notify("Đang tạo báo cáo PDF...", type="info")
+            ui.notify(_('generating_pdf', lang), type="info")
             ui.run_javascript(
                 f'window.open("{API_BASE_URL}/analysis/{current_id}/export-pdf", "_blank")'
             )
@@ -599,7 +603,7 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
         with ui.column().classes("w-full max-w-[1180px] mx-auto gap-5"):
             with ui.row().classes("w-full items-start justify-between gap-4"):
                 with ui.column().classes("gap-0.5"):
-                    ui.label("Phân tích hội thoại").classes(
+                    ui.label(_('conversation_analysis', lang)).classes(
                         "text-2xl font-bold text-slate-900 leading-tight"
                     )
                     render_text(
@@ -608,7 +612,7 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
                     )
 
                 action_button(
-                    label="Xuất báo cáo PDF",
+                    label=_('export_pdf', lang),
                     icon="download",
                     variant="primary",
                     on_click=handle_export,
@@ -639,16 +643,16 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
             if search_query:
                 with ui.element("div").classes("analysis-card w-full px-5 py-4"):
                     with ui.row().classes("items-center justify-between gap-3"):
-                        ui.label(f"Kết quả tìm kiếm: {search_query}").classes(
+                        ui.label(f"{_('search_results_label', lang)}: {search_query}").classes(
                             "text-base font-bold text-slate-800"
                         )
-                        ui.label(f"{len(search_results)} kết quả").classes(
+                        ui.label(f"{len(search_results)} {_('results_count', lang)}").classes(
                             "text-xs font-semibold text-slate-500"
                         )
 
                     if not search_results:
                         render_text(
-                            "Không tìm thấy hội thoại phù hợp trong database.",
+                            _('no_conv_found', lang),
                             "text-sm text-slate-500 mt-3",
                         )
 
@@ -667,7 +671,7 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
                                 )
 
                             action_button(
-                                label="Mở phân tích",
+                                label=_('open_analysis', lang),
                                 icon="open_in_new",
                                 variant="secondary",
                                 on_click=lambda r=result: open_analysis_result(r),
@@ -678,7 +682,7 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
                     "analysis-card w-full px-6 py-10 text-center"
                 ):
                     ui.spinner(size="lg")
-                    ui.label("Đang tải dữ liệu từ backend và phân tích AI...").classes(
+                    ui.label(_('loading_data', lang)).classes(
                         "mt-3 text-sm font-semibold text-slate-500"
                     )
                 return
@@ -687,7 +691,7 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
                 for metric in metrics:
                     render_metric_card(metric)
 
-            render_feedback_card(ai_overall_feedback)
+            render_feedback_card(ai_overall_feedback, lang)
 
             with ui.row().classes("w-full gap-6 items-start"):
                 with ui.column().classes("flex-[1.08] gap-4 min-w-0"):
@@ -695,7 +699,7 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
                         "items-center gap-3 border-b border-slate-200 pb-3"
                     ):
                         ui.icon("warning_amber").classes("text-orange-500 text-xl")
-                        ui.label("Điểm lệch nhận thức").classes(
+                        ui.label(_('perception_gaps_label', lang)).classes(
                             "text-lg font-bold text-slate-800"
                         )
 
@@ -704,30 +708,30 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
                             "analysis-card w-full px-5 py-4"
                         ):
                             render_text(
-                                "Chưa phát hiện điểm lệch nhận thức nào.",
+                                _('no_gaps', lang),
                                 "text-sm text-slate-500",
                             )
 
                     for gap in perception_gaps:
-                        render_gap_card(gap)
+                        render_gap_card(gap, lang)
 
                 with ui.column().classes("flex-[0.92] gap-4 min-w-0"):
                     with ui.row().classes(
                         "items-center gap-3 border-b border-slate-200 pb-3"
                     ):
                         ui.icon("article").classes("text-blue-500 text-xl")
-                        ui.label("Tóm tắt nội dung").classes(
+                        ui.label(_('content_summary', lang)).classes(
                             "text-lg font-bold text-slate-800"
                         )
 
                     render_summary_panel(
-                        title="Quyết định chính",
+                        title=_('main_decisions', lang),
                         items=decisions,
                         icon="check_circle",
                     )
 
                     render_summary_panel(
-                        title="Action items",
+                        title=_('action_items_label', lang),
                         items=action_items,
                         icon="task_alt",
                     )

@@ -9,4 +9,4 @@ class UiState:
 
     search_query: str = ""
     selected_history_id: str | int | None = None
-    locale_code: str = "VN"
+    locale_code: str = "vn"
