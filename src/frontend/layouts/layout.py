@@ -170,7 +170,7 @@ def base_layout(
                 "w-72 shrink-0 bg-white border-r border-slate-100 p-4 gap-6"
             ):
                 with ui.row().classes("items-center gap-2"):
-                    ui.image("images/logoitsss.png").classes(
+                    ui.image("/images/logoitsss.png").classes(
                         "h-9 w-9 rounded-lg shadow-sm"
                     )
                     ui.label("TrueTalk").classes("text-lg font-semibold text-blue-700")

@@ -47,7 +47,7 @@ def login_page(request: Request):
             "w-full max-w-md items-center rounded-2xl bg-white p-8 shadow-md"
         ):
             with ui.column().classes("items-center w-full text-center gap-2"):
-                ui.image("images/logoitsss.png").classes(
+                ui.image("/images/logoitsss.png").classes(
                     "h-16 w-16 rounded-2xl shadow-sm mx-auto"
                 ).on("click", lambda: ui.navigate.to("/"))
                 ui.label("TrueTalk").classes("text-blue-700 text-2xl font-bold")
