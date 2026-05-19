@@ -49,6 +49,7 @@ async def on_shutdown():
 
 app.on_startup(on_startup)
 app.on_shutdown(on_shutdown)
+app.add_static_files("/images", str(ROOT_DIR / "images"))
 
 # Add CORS middleware
 #   - Only for external apps.
@@ -66,6 +67,7 @@ class LanguagePrefixMiddleware(BaseHTTPMiddleware):
     _EXCEPTION_PATHS = {'/login', '/home', '/favicon.ico'}
     _EXCEPTION_PREFIXES = (
         '/api/',
+        '/images/',
         '/_nicegui/',
         '/_statics/',
         '/login/',

@@ -3,33 +3,18 @@ from __future__ import annotations
 import json
 import os
 import re
-import tempfile
 import unicodedata
-import uuid
 from datetime import datetime
-from pathlib import Path
+from difflib import SequenceMatcher
 from typing import Any
-from xml.sax.saxutils import escape
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
 from sqlmodel import Session, select
 
+from src.backend.endpoints.analysis_pdf import build_analysis_pdf
 from src.db.session import engine
 from src.models.analysis_models import (
     AnalysisConversation,
@@ -39,6 +24,9 @@ from src.models.analysis_models import (
 
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
+
+
+ANALYSIS_TRANSLATION_CACHE: dict[tuple[int, str, int], AnalysisResponse] = {}
 
 
 AI_ANALYSIS_TASK_TYPES = [
@@ -71,9 +59,9 @@ class AnalysisSearchItem(BaseModel):
     meeting_title: str
     meeting_date: str | None = None
     duration_minutes: int | None = None
-    understanding_score: int
-    overall_sentiment: str
-    ai_overall_feedback: str
+    understanding_score: int = 0
+    overall_sentiment: str = ""
+    ai_overall_feedback: str = ""
 
 
 class AnalysisRunResponse(BaseModel):
@@ -93,12 +81,63 @@ def parse_json_value(text: str | None) -> Any:
 
 
 def normalize_search_text(value: object) -> str:
-    text = str(value or "").lower()
+    text = str(value or "").replace("\u0110", "D").replace("\u0111", "d").lower()
     text = unicodedata.normalize("NFD", text)
     text = "".join(
         char for char in text if unicodedata.category(char) != "Mn"
     )
     return text.replace("đ", "d")
+
+
+def score_conversation_name_match(keyword: str, conversation_name: str) -> float:
+    normalized_name = normalize_search_text(conversation_name)
+
+    if not keyword or not normalized_name:
+        return 0
+
+    if normalized_name == keyword:
+        return 100
+
+    if normalized_name.startswith(keyword):
+        return 90 + min(9, len(keyword) / max(len(normalized_name), 1) * 9)
+
+    words = normalized_name.split()
+    if any(word.startswith(keyword) for word in words):
+        return 80 + min(9, len(keyword) / max(len(normalized_name), 1) * 9)
+
+    if keyword in normalized_name:
+        return 70 + min(9, len(keyword) / max(len(normalized_name), 1) * 9)
+
+    return SequenceMatcher(None, keyword, normalized_name).ratio() * 60
+
+
+def find_closest_conversation_names(
+    keyword: str,
+    conversations: list[AnalysisConversation],
+    limit: int = 10,
+) -> list[AnalysisConversation]:
+    normalized_keyword = normalize_search_text(keyword.strip())
+
+    if not normalized_keyword:
+        return []
+
+    ranked = [
+        (
+            score_conversation_name_match(
+                normalized_keyword,
+                conversation.conversation_name or "",
+            ),
+            conversation.created_at or datetime.min,
+            conversation,
+        )
+        for conversation in conversations
+        if conversation.conversation_id is not None
+    ]
+
+    ranked = [item for item in ranked if item[0] > 0]
+    ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
+
+    return [conversation for _, _, conversation in ranked[:limit]]
 
 
 def extract_json_from_ai(text: str) -> dict[str, Any]:
@@ -256,12 +295,9 @@ Phân tích hội thoại dưới đây để xác định:
 - Tóm tắt tình trạng hội thoại, quyết định chính và mức độ hiểu nhau.
 
 Yêu cầu bắt buộc:
-- Trả lời bằng tiếng Việt có dấu đầy đủ.
-- Không thay thế ký tự tiếng Việt bằng dấu hỏi (?).
 - Chỉ trả về JSON hợp lệ.
 - Không dùng markdown.
 - Không giải thích ngoài JSON.
-- Giá trị trong JSON phải là chuỗi Unicode UTF-8 hợp lệ.
 - Chấm "understanding_score" theo đúng tiêu chí bên dưới, trả về số nguyên từ 0 đến 100.
 - Không copy số điểm mẫu; điểm phải thay đổi theo nội dung transcript thực tế.
 - Trường "overall_sentiment" chỉ được nhận một trong ba giá trị: "Tốt", "Trung lập", "Căng thẳng".
@@ -726,6 +762,313 @@ def build_analysis_from_db(
     )
 
 
+def analysis_to_dict(analysis: AnalysisResponse) -> dict[str, Any]:
+    if hasattr(analysis, "model_dump"):
+        return analysis.model_dump()
+
+    return analysis.dict()
+
+
+def apply_analysis_translation(
+    analysis: AnalysisResponse,
+    translated: dict[str, Any],
+) -> AnalysisResponse:
+    data = analysis_to_dict(analysis)
+
+    for key in [
+        "meeting_title",
+        "overall_sentiment",
+        "ai_overall_feedback",
+        "decisions",
+        "action_items",
+    ]:
+        if key in translated:
+            data[key] = translated[key]
+
+    translated_metrics = translated.get("metrics")
+    if isinstance(translated_metrics, list):
+        metrics = data.get("metrics") or []
+        for index, metric in enumerate(metrics):
+            if index >= len(translated_metrics):
+                break
+
+            translated_metric = translated_metrics[index]
+            if not isinstance(translated_metric, dict):
+                continue
+
+            for key in ["title", "value", "subtitle"]:
+                if key in translated_metric:
+                    metric[key] = translated_metric[key]
+
+    translated_gaps = translated.get("perception_gaps")
+    if isinstance(translated_gaps, list):
+        gaps = data.get("perception_gaps") or []
+        for index, gap in enumerate(gaps):
+            if index >= len(translated_gaps):
+                break
+
+            translated_gap = translated_gaps[index]
+            if not isinstance(translated_gap, dict):
+                continue
+
+            for key in [
+                "title",
+                "severity",
+                "left_title",
+                "left_text",
+                "right_title",
+                "right_text",
+                "recommendation",
+            ]:
+                if key in translated_gap:
+                    gap[key] = translated_gap[key]
+
+    return AnalysisResponse(**data)
+
+
+def normalize_vietnamese_display_text(value: Any) -> str:
+    text = str(value or "").strip().replace("\u0110", "D").replace("\u0111", "d").lower()
+    text = unicodedata.normalize("NFD", text)
+    text = "".join(
+        char for char in text if unicodedata.category(char) != "Mn"
+    )
+    text = re.sub(r"[^a-z0-9%:/-]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+VIETNAMESE_VISIBLE_PATTERNS = [
+    "nguy co hieu lam",
+    "phia viet nam",
+    "phia nhat ban",
+    "quan diem viet nam",
+    "quan diem nhat ban",
+    "pham vi sua doi",
+    "pham vi cong viec",
+    "deadline",
+    "de tranh hieu lam",
+    "xac nhan",
+    "gui email",
+    "hoi lai",
+    "hieu rang",
+    "tot",
+    "trung lap",
+    "cang thang",
+]
+
+
+def payload_contains_vietnamese_display_text(value: Any) -> bool:
+    if isinstance(value, str):
+        normalized = normalize_vietnamese_display_text(value)
+        return any(pattern in normalized for pattern in VIETNAMESE_VISIBLE_PATTERNS)
+
+    if isinstance(value, dict):
+        return any(
+            payload_contains_vietnamese_display_text(item)
+            for item in value.values()
+        )
+
+    if isinstance(value, list):
+        return any(payload_contains_vietnamese_display_text(item) for item in value)
+
+    return False
+
+
+def translation_shape_matches(source: Any, translated: Any) -> bool:
+    if isinstance(source, dict):
+        if not isinstance(translated, dict):
+            return False
+        if set(source.keys()) != set(translated.keys()):
+            return False
+        return all(
+            translation_shape_matches(source[key], translated[key])
+            for key in source
+        )
+
+    if isinstance(source, list):
+        if not isinstance(translated, list):
+            return False
+        if len(source) != len(translated):
+            return False
+        return all(
+            translation_shape_matches(source_item, translated_item)
+            for source_item, translated_item in zip(source, translated)
+        )
+
+    return True
+
+
+async def request_japanese_translation(
+    *,
+    api_key: str,
+    payload: dict[str, Any],
+    prompt: str,
+    temperature: float,
+) -> dict[str, Any]:
+    model_name = os.getenv("GROQ_TRANSLATION_MODEL") or os.getenv(
+        "GROQ_MODEL",
+        "llama-3.3-70b-versatile",
+    )
+
+    async with httpx.AsyncClient(timeout=45) as client:
+        response = await client.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json; charset=utf-8",
+            },
+            json={
+                "model": model_name,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a precise Vietnamese-to-Japanese translator for business UI and PDF reports. "
+                            "Translate complete thoughts naturally. "
+                            "Never leave Vietnamese, romanized Vietnamese, or mixed Vietnamese-Japanese text in any visible field. "
+                            "You only return valid JSON."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": temperature,
+            },
+        )
+
+    if response.status_code >= 400:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Groq translation API error: {response.text}",
+        )
+
+    content = response.json()["choices"][0]["message"]["content"]
+    translated = extract_json_from_ai(content)
+
+    if not translation_shape_matches(payload, translated):
+        raise HTTPException(
+            status_code=500,
+            detail="Japanese translation returned an invalid payload shape",
+        )
+
+    return translated
+
+
+async def translate_analysis_to_japanese(
+    analysis: AnalysisResponse,
+) -> AnalysisResponse:
+    if analysis.id is None:
+        return analysis
+
+    cache_key = (analysis.id, "jp-ai-v4", analysis.ai_log_count)
+    cached = ANALYSIS_TRANSLATION_CACHE.get(cache_key)
+
+    if cached:
+        return cached
+
+    api_key = os.getenv("GROQ_API_KEY")
+
+    if not api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Missing GROQ_API_KEY for Japanese analysis translation",
+        )
+
+    payload = {
+        "meeting_title": analysis.meeting_title,
+        "overall_sentiment": analysis.overall_sentiment,
+        "ai_overall_feedback": analysis.ai_overall_feedback,
+        "metrics": [
+            {
+                "title": metric.get("title", ""),
+                "value": metric.get("value", ""),
+                "subtitle": metric.get("subtitle", ""),
+            }
+            for metric in analysis.metrics
+        ],
+        "perception_gaps": [
+            {
+                "title": gap.get("title", ""),
+                "severity": gap.get("severity", ""),
+                "left_title": gap.get("left_title", ""),
+                "left_text": gap.get("left_text", ""),
+                "right_title": gap.get("right_title", ""),
+                "right_text": gap.get("right_text", ""),
+                "recommendation": gap.get("recommendation", ""),
+            }
+            for gap in analysis.perception_gaps
+        ],
+        "decisions": analysis.decisions,
+        "action_items": analysis.action_items,
+    }
+
+    prompt = f"""
+Translate this Vietnamese conversation-analysis payload into natural, professional Japanese for a Japanese UI and PDF report.
+
+Critical rules:
+- Return valid JSON only. Do not use markdown.
+- Keep exactly the same JSON keys and list lengths.
+- Translate every user-facing text value completely into Japanese.
+- Rewrite whole sentences naturally. Do not translate word-by-word.
+- Do not leave Vietnamese, romanized Vietnamese, or mixed Vietnamese-Japanese text in any visible field.
+- Preserve only numbers, dates, percentages, empty strings, and product/test codes that are names.
+- Severity values must be exactly one of: "低", "中", "高".
+- Sentiment values must be natural Japanese, for example "良好", "中立", or "緊張".
+
+JSON payload:
+{json.dumps(payload, ensure_ascii=False)}
+"""
+
+    try:
+        translated = await request_japanese_translation(
+            api_key=api_key,
+            payload=payload,
+            prompt=prompt,
+            temperature=0.1,
+        )
+
+        if payload_contains_vietnamese_display_text(translated):
+            retry_prompt = f"""
+The previous JSON still contains Vietnamese, romanized Vietnamese, or mixed Vietnamese-Japanese text.
+Rewrite the entire payload again in natural Japanese.
+Return valid JSON only, with the exact same keys and list lengths.
+Every visible value must be fully Japanese.
+
+Invalid JSON to fix:
+{json.dumps(translated, ensure_ascii=False)}
+"""
+            translated = await request_japanese_translation(
+                api_key=api_key,
+                payload=payload,
+                prompt=retry_prompt,
+                temperature=0.0,
+            )
+
+        if payload_contains_vietnamese_display_text(translated):
+            raise HTTPException(
+                status_code=500,
+                detail="Japanese translation still contains Vietnamese text",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Cannot translate analysis to Japanese",
+        )
+
+    localized = apply_analysis_translation(analysis, translated)
+    ANALYSIS_TRANSLATION_CACHE[cache_key] = localized
+    return localized
+
+
+async def localize_analysis_response(
+    analysis: AnalysisResponse,
+    lang: str,
+) -> AnalysisResponse:
+    if lang != "jp":
+        return analysis
+    return await translate_analysis_to_japanese(analysis)
+
+
 async def ensure_analysis_exists(conversation_id: int) -> AnalysisResponse:
     with Session(engine) as session:
         conversation = get_conversation_or_404(session, conversation_id)
@@ -758,7 +1101,9 @@ async def ensure_analysis_exists(conversation_id: int) -> AnalysisResponse:
 
 
 @router.get("/latest/ensure", response_model=AnalysisResponse)
-async def ensure_latest_analysis() -> AnalysisResponse:
+async def ensure_latest_analysis(
+    lang: str = Query(default="vn", pattern="^(vn|jp)$"),
+) -> AnalysisResponse:
     with Session(engine) as session:
         statement = (
             select(AnalysisConversation)
@@ -772,11 +1117,14 @@ async def ensure_latest_analysis() -> AnalysisResponse:
 
         conversation_id = conversation.conversation_id
 
-    return await ensure_analysis_exists(conversation_id)
+    analysis = await ensure_analysis_exists(conversation_id)
+    return await localize_analysis_response(analysis, lang)
 
 
 @router.get("/latest", response_model=AnalysisResponse)
-def get_latest_analysis() -> AnalysisResponse:
+async def get_latest_analysis(
+    lang: str = Query(default="vn", pattern="^(vn|jp)$"),
+) -> AnalysisResponse:
     with Session(engine) as session:
         statement = (
             select(AnalysisConversation)
@@ -797,11 +1145,12 @@ def get_latest_analysis() -> AnalysisResponse:
             conversation.conversation_id,
         )
 
-        return build_analysis_from_db(
+        analysis = build_analysis_from_db(
             conversation=conversation,
             messages=messages,
             logs=logs,
         )
+        return await localize_analysis_response(analysis, lang)
 
 
 @router.get("/search", response_model=list[AnalysisSearchItem])
@@ -809,7 +1158,7 @@ def search_analyses(
     q: str = Query(..., min_length=1),
     limit: int = Query(default=10, ge=1, le=50),
 ) -> list[AnalysisSearchItem]:
-    keyword = normalize_search_text(q.strip())
+    keyword = q.strip()
 
     if not keyword:
         return []
@@ -818,66 +1167,40 @@ def search_analyses(
         statement = (
             select(AnalysisConversation)
             .order_by(AnalysisConversation.created_at.desc())
-            .limit(200)
         )
         conversations = session.exec(statement).all()
+        matched_conversations = find_closest_conversation_names(
+            keyword,
+            list(conversations),
+            limit,
+        )
 
         results: list[AnalysisSearchItem] = []
 
-        for conversation in conversations:
+        for conversation in matched_conversations:
             if conversation.conversation_id is None:
                 continue
 
-            messages = get_messages_by_conversation(
-                session,
-                conversation.conversation_id,
-            )
-            logs = get_ai_logs_by_conversation(
-                session,
-                conversation.conversation_id,
-            )
-
-            searchable_text = normalize_search_text(
-                " ".join(
-                    [
-                        conversation.conversation_name or "",
-                        *[message.text for message in messages],
-                        *[log.output_text for log in logs],
-                        *[log.ai_task_type for log in logs],
-                    ]
-                )
-            )
-
-            if keyword not in searchable_text:
-                continue
-
-            analysis = build_analysis_from_db(
-                conversation=conversation,
-                messages=messages,
-                logs=logs,
-            )
-
             results.append(
                 AnalysisSearchItem(
-                    id=analysis.id,
-                    meeting_title=analysis.meeting_title,
-                    meeting_date=analysis.meeting_date,
-                    duration_minutes=analysis.duration_minutes,
-                    understanding_score=analysis.understanding_score,
-                    overall_sentiment=analysis.overall_sentiment,
-                    ai_overall_feedback=analysis.ai_overall_feedback,
+                    id=conversation.conversation_id,
+                    meeting_title=conversation.conversation_name,
+                    meeting_date=conversation.created_at.strftime("%d/%m/%Y")
+                    if conversation.created_at
+                    else None,
                 )
             )
-
-            if len(results) >= limit:
-                break
 
         return results
 
 
 @router.get("/{conversation_id}/ensure", response_model=AnalysisResponse)
-async def ensure_analysis_by_id(conversation_id: int) -> AnalysisResponse:
-    return await ensure_analysis_exists(conversation_id)
+async def ensure_analysis_by_id(
+    conversation_id: int,
+    lang: str = Query(default="vn", pattern="^(vn|jp)$"),
+) -> AnalysisResponse:
+    analysis = await ensure_analysis_exists(conversation_id)
+    return await localize_analysis_response(analysis, lang)
 
 
 @router.post("/{conversation_id}/run", response_model=AnalysisRunResponse)
@@ -962,276 +1285,70 @@ async def run_conversation_analysis(
         )
 
 
-def register_pdf_font() -> str:
-    font_name = "TrueTalkFont"
-
-    try:
-        pdfmetrics.getFont(font_name)
-        return font_name
-    except Exception:
-        pass
-
-    candidates = [
-        "C:/Windows/Fonts/arial.ttf",
-        "C:/Windows/Fonts/calibri.ttf",
-        "C:/Windows/Fonts/tahoma.ttf",
-        "C:/Windows/Fonts/verdana.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    ]
-
-    for font_path in candidates:
-        if Path(font_path).exists():
-            try:
-                pdfmetrics.registerFont(TTFont(font_name, font_path))
-                return font_name
-            except Exception:
-                continue
-
-    return "Helvetica"
-
-
-def pdf_paragraph(text: object, style: ParagraphStyle) -> Paragraph:
-    safe_text = escape(str(text or "")).replace("\n", "<br/>")
-    return Paragraph(safe_text, style)
-
-
-def build_analysis_pdf(analysis: AnalysisResponse) -> Path:
-    font_name = register_pdf_font()
-
-    reports_dir = Path(tempfile.gettempdir()) / "truetalk_reports"
-    reports_dir.mkdir(parents=True, exist_ok=True)
-
-    file_path = (
-        reports_dir
-        / f"analysis_report_{analysis.id}_{uuid.uuid4().hex[:8]}.pdf"
-    )
-
-    doc = SimpleDocTemplate(
-        str(file_path),
-        pagesize=A4,
-        rightMargin=1.7 * cm,
-        leftMargin=1.7 * cm,
-        topMargin=1.5 * cm,
-        bottomMargin=1.5 * cm,
-    )
-
-    base_styles = getSampleStyleSheet()
-
-    title_style = ParagraphStyle(
-        "TrueTalkTitle",
-        parent=base_styles["Title"],
-        fontName=font_name,
-        fontSize=20,
-        leading=26,
-        spaceAfter=14,
-    )
-
-    heading_style = ParagraphStyle(
-        "TrueTalkHeading",
-        parent=base_styles["Heading2"],
-        fontName=font_name,
-        fontSize=13,
-        leading=18,
-        spaceBefore=12,
-        spaceAfter=8,
-    )
-
-    normal_style = ParagraphStyle(
-        "TrueTalkNormal",
-        parent=base_styles["Normal"],
-        fontName=font_name,
-        fontSize=10,
-        leading=15,
-    )
-
-    small_style = ParagraphStyle(
-        "TrueTalkSmall",
-        parent=base_styles["Normal"],
-        fontName=font_name,
-        fontSize=9,
-        leading=13,
-        textColor=colors.HexColor("#475569"),
-    )
-
-    story = []
-
-    story.append(pdf_paragraph("Báo cáo phân tích hội thoại", title_style))
-    story.append(pdf_paragraph(analysis.meeting_title, heading_style))
-
-    info_data = [
-        [
-            pdf_paragraph("Ngày họp", small_style),
-            pdf_paragraph(analysis.meeting_date or "Không có dữ liệu", normal_style),
-        ],
-        [
-            pdf_paragraph("Thời lượng", small_style),
-            pdf_paragraph(f"{analysis.duration_minutes or 0} phút", normal_style),
-        ],
-        [
-            pdf_paragraph("Độ hiểu", small_style),
-            pdf_paragraph(f"{analysis.understanding_score}%", normal_style),
-        ],
-        [
-            pdf_paragraph("Cảm xúc chung", small_style),
-            pdf_paragraph(analysis.overall_sentiment, normal_style),
-        ],
-    ]
-
-    info_table = Table(info_data, colWidths=[4 * cm, 12 * cm])
-    info_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F1F5F9")),
-                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-                ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-            ]
-        )
-    )
-
-    story.append(info_table)
-    story.append(Spacer(1, 10))
-
-    story.append(pdf_paragraph("Nhận xét tổng quan từ AI", heading_style))
-    story.append(pdf_paragraph(analysis.ai_overall_feedback, normal_style))
-
-    story.append(pdf_paragraph("Chỉ số phân tích", heading_style))
-
-    metrics_data = [
-        [
-            pdf_paragraph("Chỉ số", small_style),
-            pdf_paragraph("Giá trị", small_style),
-            pdf_paragraph("Mô tả", small_style),
-        ]
-    ]
-
-    for metric in analysis.metrics:
-        metrics_data.append(
-            [
-                pdf_paragraph(metric.get("title", ""), normal_style),
-                pdf_paragraph(metric.get("value", ""), normal_style),
-                pdf_paragraph(metric.get("subtitle", ""), normal_style),
-            ]
-        )
-
-    metrics_table = Table(metrics_data, colWidths=[5 * cm, 4 * cm, 7 * cm])
-    metrics_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#DBEAFE")),
-                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-                ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-            ]
-        )
-    )
-
-    story.append(metrics_table)
-    story.append(Spacer(1, 10))
-
-    story.append(pdf_paragraph("Điểm lệch nhận thức", heading_style))
-
-    if not analysis.perception_gaps:
-        story.append(
-            pdf_paragraph(
-                "Chưa phát hiện điểm lệch nhận thức nào.",
-                normal_style,
-            )
-        )
-
-    for index, gap in enumerate(analysis.perception_gaps, start=1):
-        story.append(
-            pdf_paragraph(
-                f"{index}. {gap.get('title', 'Vấn đề chưa đặt tên')} - {gap.get('severity', '')}",
-                normal_style,
-            )
-        )
-
-        gap_table = Table(
-            [
-                [
-                    pdf_paragraph(gap.get("left_title", "Quan điểm Việt Nam"), small_style),
-                    pdf_paragraph(gap.get("left_text", ""), normal_style),
-                ],
-                [
-                    pdf_paragraph(gap.get("right_title", "Quan điểm Nhật Bản"), small_style),
-                    pdf_paragraph(gap.get("right_text", ""), normal_style),
-                ],
-                [
-                    pdf_paragraph("Khuyến nghị AI", small_style),
-                    pdf_paragraph(gap.get("recommendation", ""), normal_style),
-                ],
-            ],
-            colWidths=[4 * cm, 12 * cm],
-        )
-
-        gap_table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#FEF3C7")),
-                    ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-                    ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                    ("TOPPADDING", (0, 0), (-1, -1), 7),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-                ]
-            )
-        )
-
-        story.append(gap_table)
-        story.append(Spacer(1, 8))
-
-    story.append(pdf_paragraph("Tóm tắt nội dung / Quyết định chính", heading_style))
-
-    for index, decision in enumerate(analysis.decisions, start=1):
-        story.append(pdf_paragraph(f"{index}. {decision}", normal_style))
-
-    story.append(pdf_paragraph("Action items", heading_style))
-
-    for index, item in enumerate(analysis.action_items, start=1):
-        story.append(pdf_paragraph(f"{index}. {item}", normal_style))
-
-    doc.build(story)
-
-    return file_path
-
-
 @router.get("/latest/export-pdf")
-def export_latest_analysis_pdf() -> FileResponse:
-    analysis = get_latest_analysis()
-    file_path = build_analysis_pdf(analysis)
+async def export_latest_analysis_pdf(
+    lang: str = Query(default="vn", pattern="^(vn|jp)$"),
+) -> FileResponse:
+    with Session(engine) as session:
+        statement = (
+            select(AnalysisConversation)
+            .order_by(AnalysisConversation.created_at.desc())
+            .limit(1)
+        )
+        conversation = session.exec(statement).first()
+
+        if not conversation or conversation.conversation_id is None:
+            raise HTTPException(status_code=404, detail="No conversation found")
+
+        conversation_id = conversation.conversation_id
+
+    analysis = await ensure_analysis_exists(conversation_id)
+    analysis = await localize_analysis_response(analysis, lang)
+    file_path = build_analysis_pdf(analysis, lang)
 
     return FileResponse(
         path=str(file_path),
         media_type="application/pdf",
-        filename=f"bao_cao_phan_tich_{analysis.id}.pdf",
+        filename=(
+            f"analysis_report_{analysis.id}.pdf"
+            if lang == "jp"
+            else f"bao_cao_phan_tich_{analysis.id}.pdf"
+        ),
     )
+
+
+@router.get("/export-pdf")
+async def export_current_analysis_pdf(
+    lang: str = Query(default="vn", pattern="^(vn|jp)$"),
+) -> FileResponse:
+    return await export_latest_analysis_pdf(lang=lang)
 
 
 @router.get("/{conversation_id}/export-pdf")
-def export_analysis_pdf(conversation_id: int) -> FileResponse:
-    analysis = get_analysis_by_id(conversation_id)
-    file_path = build_analysis_pdf(analysis)
+async def export_analysis_pdf(
+    conversation_id: int,
+    lang: str = Query(default="vn", pattern="^(vn|jp)$"),
+) -> FileResponse:
+    analysis = await ensure_analysis_exists(conversation_id)
+    analysis = await localize_analysis_response(analysis, lang)
+    file_path = build_analysis_pdf(analysis, lang)
 
     return FileResponse(
         path=str(file_path),
         media_type="application/pdf",
-        filename=f"bao_cao_phan_tich_{conversation_id}.pdf",
+        filename=(
+            f"analysis_report_{conversation_id}.pdf"
+            if lang == "jp"
+            else f"bao_cao_phan_tich_{conversation_id}.pdf"
+        ),
     )
 
 
 @router.get("/{conversation_id}", response_model=AnalysisResponse)
-def get_analysis_by_id(conversation_id: int) -> AnalysisResponse:
+async def get_analysis_by_id(
+    conversation_id: int,
+    lang: str = Query(default="vn", pattern="^(vn|jp)$"),
+) -> AnalysisResponse:
     with Session(engine) as session:
         conversation = get_conversation_or_404(session, conversation_id)
 
@@ -1247,8 +1364,9 @@ def get_analysis_by_id(conversation_id: int) -> AnalysisResponse:
             conversation.conversation_id,
         )
 
-        return build_analysis_from_db(
+        analysis = build_analysis_from_db(
             conversation=conversation,
             messages=messages,
             logs=logs,
         )
+        return await localize_analysis_response(analysis, lang)
