@@ -19,7 +19,6 @@ from src.core.i18n import (
     VALID_LANGUAGES,
     DEFAULT_LANGUAGE,
 )
-from src.db import init_db
 
 # ruff: noqa: F401
 from src.frontend.pages import (
@@ -35,19 +34,12 @@ from src.frontend.pages import (
 )
 
 
-async def on_startup():
-    """Initializes the database on application startup."""
-    print("INFO:     Initializing database...")
-    init_db.init()
-    print("INFO:     Database initialization complete.")
-
-
 async def on_shutdown():
     """Actions to perform on application shutdown."""
     print("INFO:     Application shutting down.")
 
 
-app.on_startup(on_startup)
+app.on_shutdown(on_shutdown)
 app.on_shutdown(on_shutdown)
 
 # Add CORS middleware
