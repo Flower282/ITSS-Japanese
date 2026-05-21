@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Union
 
 from nicegui import ui
 
@@ -20,7 +20,7 @@ def app_top_bar(
     search_history: list[str] | None = None,
     logo_src: str | None = None,
     on_logo_click: Callable[[], None] | None = None,
-    language_options: list[str] | None = None,
+    language_options: Union[list[str], dict[str, str]] | None = None,
     active_language: str | None = None,
     on_language_change: Callable[[str], None] | None = None,
     primary_action_label: str | None = None,
@@ -50,7 +50,13 @@ def app_top_bar(
                             ui.element("option").props(f"value={item}")
                 if on_search:
                     search_input.on(
-                        "update:model-value", lambda e: on_search(e.value)
+                        "keydown.enter",
+                        lambda: on_search(search_input.value or ""),
+                    )
+                    search_input.props("append-icon=search")
+                    search_input.on(
+                        "click:append",
+                        lambda: on_search(search_input.value or ""),
                     )
             if title_slot:
                 title_slot()
@@ -85,13 +91,9 @@ def app_top_bar(
                     selector = ui.select(
                         options=language_options,
                         value=active_language or locale_code,
+                        on_change=lambda e: on_language_change(e.value) if on_language_change else None,
                     ).classes("text-xs")
                     selector.props("dense outlined")
-                    if on_language_change:
-                        selector.on(
-                            "update:model-value",
-                            lambda e: on_language_change(e.value),
-                        )
                 else:
                     badge = ui.element("div").classes(
                         "h-8 w-8 rounded-full bg-blue-600 text-white "

@@ -11,70 +11,113 @@ from src.frontend.components.components import (
 )
 from src.frontend.layouts.layout import base_layout
 from src.frontend.ui_state import UiState
+from src.core.i18n import _, get_user_language, validate_language_or_default
 
 
 @ui.page("/culture")
 def culture_page() -> None:
     layout_state = UiState()
 
-    handbook_items = [
-        {
-            "title": "Kính ngữ (Keigo)",
-            "description": "Hệ thống ngôn ngữ phân cấp, thể hiện sự tôn trọng với người lớn tuổi, cấp trên.",
-            "tags": [
-                "てす・ます (Lịch sự cơ bản)",
-                "尊敬語 (Tôn kính ngữ)",
-                "謙譲語 (Khiêm nhường ngữ)",
-            ],
-            "link_label": "Đọc tiếp",
-            "link_href": "#",
-        },
-        {
-            "title": "Phong cách phản hồi",
-            "description": "Tôn trọng nhịp độ phản hồi và giữ thể diện trong trao đổi công việc.",
-            "tags": ["Tránh nói thẳng", "Lắng nghe trước khi góp ý"],
-            "link_label": "Đọc tiếp",
-            "link_href": "#",
-        },
-    ]
+    stored_lang = get_user_language()
+    lang = validate_language_or_default(stored_lang)
 
-    scenarios = [
-        {
-            "index": 1,
-            "category": "GIAO TIẾP GIÁN TIẾP",
-            "phrase": "Đối tác nói: \"Chotto kangaesete kudasai\" (Để tôi suy nghĩ một chút)",
-            "meaning": "Đây thường là cách từ chối lịch sự, không phải thực sự cần thêm thời gian suy nghĩ.",
-            "response": "Nên chuẩn bị phương án thay thế hoặc nhẹ nhàng hỏi về các vướng mắc hiện tại.",
-            "accent_classes": "border-amber-100 bg-amber-50/70",
-        },
-        {
-            "index": 2,
-            "category": "QUẢN LÝ THỜI GIAN",
-            "phrase": "Deadline được đưa ra \"narubeku hayaku\" (Càng sớm càng tốt)",
-            "meaning": "Trong văn hóa làm việc Nhật, đây thường có nghĩa là NGAY LẬP TỨC, ưu tiên cao nhất.",
-            "response": "Cần bắt tay vào làm ngay hoặc báo cáo thời gian hoàn thành cụ thể.",
-            "accent_classes": "border-rose-100 bg-rose-50/60",
-        },
-    ]
+    if lang == 'jp':
+        handbook_items = [
+            {
+                "title": "敬語（けいご）",
+                "description": "年上や上司への敬意を示す階層的な言語システム。",
+                "tags": [
+                    "です・ます（基本的な丁寧さ）",
+                    "尊敬語（相手を高める）",
+                    "謙譲語（自分を下げる）",
+                ],
+                "link_label": "続きを読む",
+                "link_href": "#",
+            },
+            {
+                "title": "返答スタイル",
+                "description": "ビジネスのやり取りで返答のペースを尊重し、面目を保つ。",
+                "tags": ["直接的な言い方を避ける", "提案する前に聞く"],
+                "link_label": "続きを読む",
+                "link_href": "#",
+            },
+        ]
+        scenarios = [
+            {
+                "index": 1,
+                "category": "間接的なコミュニケーション",
+                "phrase": '相手が言いました: "ちょっと考えさせてください"',
+                "meaning": "これは多くの場合、時間が必要なのではなく、丁寧な断り方です。",
+                "response": "代替案を準備するか、現在の懸念事項について穏やかに尋ねる。",
+                "accent_classes": "border-amber-100 bg-amber-50/70",
+            },
+            {
+                "index": 2,
+                "category": "時間管理",
+                "phrase": '"なるべく早く" というデッドラインが設定された',
+                "meaning": "日本の仕事文化では、これは通常「今すぐ」、最優先事項を意味します。",
+                "response": "すぐに取り掛かるか、具体的な完了時間を報告する。",
+                "accent_classes": "border-rose-100 bg-rose-50/60",
+            },
+        ]
+    else:
+        handbook_items = [
+            {
+                "title": "Kính ngữ (Keigo)",
+                "description": "Hệ thống ngôn ngữ phân cấp, thể hiện sự tôn trọng với người lớn tuổi, cấp trên.",
+                "tags": [
+                    "てす・ます (Lịch sự cơ bản)",
+                    "尊敬語 (Tôn kính ngữ)",
+                    "謙譲語 (Khiêm nhường ngữ)",
+                ],
+                "link_label": "Đọc tiếp",
+                "link_href": "#",
+            },
+            {
+                "title": "Phong cách phản hồi",
+                "description": "Tôn trọng nhịp độ phản hồi và giữ thể diện trong trao đổi công việc.",
+                "tags": ["Tránh nói thẳng", "Lắng nghe trước khi góp ý"],
+                "link_label": "Đọc tiếp",
+                "link_href": "#",
+            },
+        ]
+        scenarios = [
+            {
+                "index": 1,
+                "category": "GIAO TIẾP GIÁN TIẾP",
+                "phrase": 'Đối tác nói: "Chotto kangaesete kudasai" (Để tôi suy nghĩ một chút)',
+                "meaning": "Đây thường là cách từ chối lịch sự, không phải thực sự cần thêm thời gian suy nghĩ.",
+                "response": "Nên chuẩn bị phương án thay thế hoặc nhẹ nhàng hỏi về các vướng mắc hiện tại.",
+                "accent_classes": "border-amber-100 bg-amber-50/70",
+            },
+            {
+                "index": 2,
+                "category": "QUẢN LÝ THỜI GIAN",
+                "phrase": 'Deadline được đưa ra "narubeku hayaku" (Càng sớm càng tốt)',
+                "meaning": "Trong văn hóa làm việc Nhật, đây thường có nghĩa là NGAY LẬP TỨC, ưu tiên cao nhất.",
+                "response": "Cần bắt tay vào làm ngay hoặc báo cáo thời gian hoàn thành cụ thể.",
+                "accent_classes": "border-rose-100 bg-rose-50/60",
+            },
+        ]
 
     def handle_new_conversation() -> None:
         ui.navigate.to("/translate")
 
     def handle_recommended_lesson() -> None:
-        ui.notify("Đã mở bài học gợi ý.", type="info")
+        ui.notify(_('opened_lesson', lang), type="info")
 
     def handle_roadmap() -> None:
-        ui.notify("Đã hiển thị lộ trình học tập.", type="info")
+        ui.notify(_('showed_roadmap', lang), type="info")
 
     def handle_sync() -> None:
-        ui.notify("Đã cập nhật từ hội thoại gần nhất.", type="positive")
+        ui.notify(_('updated_from_conv', lang), type="positive")
 
     def handle_search(value: str) -> None:
         if value:
-            ui.notify(f"Đang tìm: {value}", type="info")
+            ui.notify(f"{_('searching', lang)}: {value}", type="info")
 
     def handle_locale_click() -> None:
-        ui.notify("Đã chuyển ngôn ngữ hiển thị.", type="info")
+        ui.notify(_('switched_lang', lang), type="info")
 
     with base_layout(
         active_nav="/culture",
@@ -92,17 +135,17 @@ def culture_page() -> None:
                 with icon_box:
                     ui.icon("public")
                 page_title_block(
-                    title="Giải thích văn hóa",
-                    subtitle="Nâng cao sự thấu hiểu văn hóa Nhật Bản (日本の文化理解)",
+                    title=_('culture_explain_title', lang),
+                    subtitle=_('culture_subtitle', lang),
                 )
 
             with ui.row().classes("items-center gap-2"):
-                ui.label("Mới").classes(
+                ui.label(_('new_badge', lang)).classes(
                     "text-[10px] font-semibold px-2 py-0.5 rounded-full "
                     "bg-amber-100 text-amber-700"
                 )
                 action_button(
-                    label="Bài học: Kỹ năng đọc không khí (空気を読む)",
+                    label=_('recommended_lesson_btn', lang),
                     icon="school",
                     variant="secondary",
                     on_click=handle_recommended_lesson,
@@ -124,16 +167,15 @@ def culture_page() -> None:
                         )
                         with icon_box:
                             ui.icon("psychology")
-                        ui.label("Trợ lý Văn hóa AI").classes(
+                        ui.label(_('ai_culture_assistant', lang)).classes(
                             "text-sm font-semibold text-slate-800"
                         )
-                    ui.label(
-                        "Qua phân tích lịch sử hội thoại, bạn có xu hướng sử dụng ngôn ngữ Nhật "
-                        "qua trang trọng so với mục đích thân thiện trong môi trường IT startup."
-                    ).classes("text-sm text-slate-600 mt-2")
+                    ui.label(_('ai_culture_insight', lang)).classes(
+                        "text-sm text-slate-600 mt-2"
+                    )
 
                     action_button(
-                        label="Xem lộ trình gợi ý",
+                        label=_('view_roadmap', lang),
                         icon="map",
                         variant="secondary",
                         on_click=handle_roadmap,
@@ -141,18 +183,18 @@ def culture_page() -> None:
                     )
 
                 with ui.column().classes("gap-3"):
-                    ui.label("Cẩm nang giao tiếp").classes(
+                    ui.label(_('comm_handbook', lang)).classes(
                         "text-sm font-semibold text-slate-700"
                     )
                     insight_list(items=handbook_items, max_height="300px")
 
             with ui.column().classes("flex-1 gap-4"):
                 scenario_panel(
-                    title="Phân tích tình huống thực tế",
+                    title=_('real_situation_analysis', lang),
                     scenarios=scenarios,
                     max_height="520px",
                     header_action=lambda: sync_action_bar(
-                        label="Cập nhật từ hội thoại của bạn",
+                        label=_('update_from_conv', lang),
                         icon="sync",
                         on_click=handle_sync,
                         variant="secondary",

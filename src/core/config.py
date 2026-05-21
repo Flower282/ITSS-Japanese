@@ -1,5 +1,11 @@
+from pathlib import Path
+
 from pydantic import EmailStr
 from pydantic_settings import BaseSettings
+
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+ENV_FILE = ROOT_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -13,8 +19,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
     GROQ_API_KEY: str
+
     class Config:
-        env_file = ".env"
+        env_file = ENV_FILE
 
 
 settings = Settings()

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import inspect
 from contextlib import contextmanager
-from typing import Callable, Iterator
+from typing import Any, Callable, Iterator
 
 from nicegui import ui
 
@@ -11,27 +13,37 @@ from src.frontend.components.app_top_bar import app_top_bar
 from src.frontend.components.history_list_panel import history_list_panel
 from src.frontend.components.side_nav_menu import side_nav_menu
 from src.frontend.ui_state import UiState
+from src.core.i18n import (
+    _,
+    get_language_options,
+    set_user_language,
+    VALID_LANGUAGES,
+    switch_language,
+    get_user_language,
+    validate_language_or_default,
+    nav,
+)
 
 
-def build_nav_items(active_route: str) -> list[dict]:
+def build_nav_items(active_route: str, lang: str = 'vn') -> list[dict]:
     items = [
         {
-            "label": "Tổng quan",
+            "label": _('nav_overview', lang),
             "icon": "grid_view",
             "route": "/",
         },
         {
-            "label": "Dịch hội thoại",
+            "label": _('nav_translate_conv', lang),
             "icon": "translate",
             "route": "/translate",
         },
         {
-            "label": "Phân tích hội thoại",
+            "label": _('nav_analysis_conv', lang),
             "icon": "analytics",
             "route": "/analysis",
         },
         {
-            "label": "Giải thích văn hóa",
+            "label": _('nav_culture_explain', lang),
             "icon": "menu_book",
             "route": "/culture",
         },
@@ -44,10 +56,6 @@ def build_nav_items(active_route: str) -> list[dict]:
 
 
 def default_history_items() -> list[dict]:
-    """
-    Không dùng data mẫu nữa.
-    Nếu muốn sidebar có lịch sử thật, truyền history_items từ page vào base_layout.
-    """
     return []
 
 
@@ -73,15 +81,14 @@ def base_layout(
     ui_state: UiState,
     title_slot: Callable[[], None] | None = None,
     top_bar_actions: list[dict] | None = None,
-    on_search: Callable[[str], None] | None = None,
+    on_search: Callable[[str], Any] | None = None,
     on_locale_click: Callable[[], None] | None = None,
     on_locale_change: Callable[[str], None] | None = None,
     on_new_conversation: Callable[[], None] | None = None,
     on_history_select: Callable[[str | int], None] | None = None,
     history_items: list[dict] | None = None,
-    search_placeholder: str = "Tìm kiếm hội thoại, phân tích, văn hóa...",
     search_history: list[str] | None = None,
-    user_subtitle: str | None = "Người Việt Nam",
+    user_subtitle: str | None = None,
 ) -> Iterator[None]:
     if not state.get_auth():
         ui.navigate.to("/login")
@@ -89,7 +96,7 @@ def base_layout(
         return
 
     profile = state.get_profile() or {}
-    user_name = profile.get("name") or profile.get("email") or "Người dùng"
+    user_name = profile.get("name") or profile.get("email") or "User"
 
     ui.add_head_html(
         """
@@ -102,9 +109,18 @@ def base_layout(
         """
     )
 
-    nav_items = build_nav_items(active_nav)
     history_items = history_items or []
     search_history = search_history or []
+
+    # Initialize locale from persistent storage so the UI reflects user's choice
+    stored_lang = get_user_language()
+    ui_state.locale_code = validate_language_or_default(stored_lang)
+    lang = ui_state.locale_code
+
+    # Build i18n-aware values
+    nav_items = build_nav_items(active_nav, lang)
+    resolved_user_subtitle = user_subtitle if user_subtitle is not None else _('user_subtitle', lang)
+    resolved_search_placeholder = _('search_placeholder', lang)
 
     if ui_state.selected_history_id is None and history_items:
         ui_state.selected_history_id = history_items[0]["id"]
@@ -114,13 +130,25 @@ def base_layout(
         ui_state.search_query = keyword
 
         if on_search:
-            on_search(keyword)
+            result = on_search(keyword)
+
+            if inspect.isawaitable(result):
+                asyncio.create_task(result)
 
     def handle_locale_change(value: str) -> None:
-        ui_state.locale_code = value
+        normalized_lang = value.lower() if isinstance(value, str) else value
+        if normalized_lang not in VALID_LANGUAGES:
+            normalized_lang = 'vn'
+
+        print(f"User selected language: {normalized_lang}")
+
+        ui_state.locale_code = normalized_lang
+        set_user_language(normalized_lang)
 
         if on_locale_change:
-            on_locale_change(value)
+            on_locale_change(normalized_lang)
+        else:
+            switch_language(normalized_lang, current_path=active_nav)
 
     def handle_history_select(history_id: str | int) -> None:
         ui_state.selected_history_id = history_id
@@ -132,7 +160,7 @@ def base_layout(
         if on_new_conversation:
             on_new_conversation()
         else:
-            ui.navigate.to("/translate")
+            ui.navigate.to(nav('/translate', lang))
 
     with ui.element("div").classes("min-h-screen w-full tt-body"):
         render_background()
@@ -142,42 +170,44 @@ def base_layout(
                 "w-72 shrink-0 bg-white border-r border-slate-100 p-4 gap-6"
             ):
                 with ui.row().classes("items-center gap-2"):
-                    ui.image("images/logoitsss.png").classes(
+                    ui.image("/images/logoitsss.png").classes(
                         "h-9 w-9 rounded-lg shadow-sm"
                     )
                     ui.label("TrueTalk").classes("text-lg font-semibold text-blue-700")
 
                 action_button(
-                    label="Hội thoại mới",
+                    label=_('new_conversation', lang),
                     icon="add",
                     on_click=handle_new_conversation,
                 ).classes("w-full")
 
                 with ui.column().classes("gap-2"):
-                    ui.label("TÍNH NĂNG CHÍNH").classes(
+                    ui.label(_('main_features', lang)).classes(
                         "text-xs text-slate-400 tracking-wide"
                     )
                     side_nav_menu(
                         items=nav_items,
-                        on_navigate=lambda route: ui.navigate.to(route),
+                        on_navigate=lambda route: ui.navigate.to(nav(route, lang)),
                     )
 
                 history_list_panel(
-                    title="LỊCH SỬ",
+                    title=_('history', lang),
                     items=history_items,
                     selected_id=ui_state.selected_history_id,
                     on_select=handle_history_select,
                 )
 
             with ui.column().classes("flex-1 p-6 gap-6"):
+                lang_options_dict = get_language_options(lang)
+
                 app_top_bar(
-                    search_placeholder=search_placeholder,
+                    search_placeholder=resolved_search_placeholder,
                     search_history=search_history,
                     user_name=user_name,
-                    user_subtitle=user_subtitle,
-                    locale_code=ui_state.locale_code,
-                    language_options=["VN", "JP"],
-                    active_language=ui_state.locale_code,
+                    user_subtitle=resolved_user_subtitle,
+                    locale_code=lang,
+                    language_options=lang_options_dict,
+                    active_language=lang,
                     on_language_change=handle_locale_change,
                     title_slot=title_slot,
                     on_search=handle_search,
