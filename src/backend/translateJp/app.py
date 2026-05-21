@@ -25,6 +25,8 @@ class VoiceTranslatorApp:
         self.recording = False
         self.service = VoiceTranslationService(sample_rate=self.sample_rate)
 
+        self.direction_var = tk.StringVar(value="ja-to-vi")
+
         self.status_var = tk.StringVar(value="Sẵn sàng")
         self._build_ui()
 
@@ -38,18 +40,18 @@ class VoiceTranslatorApp:
         main = ttk.Frame(self.root, padding=18)
         main.pack(fill="both", expand=True)
 
-        header = ttk.Label(
+        self.header_label = ttk.Label(
             main,
-            text="Ghi âm tiếng Nhật, xử lý nhiễu và dịch sang tiếng Việt",
+            text="",
             font=("Segoe UI", 18, "bold")
         )
-        header.pack(anchor="w")
+        self.header_label.pack(anchor="w")
 
-        sub = ttk.Label(
+        self.sub_label = ttk.Label(
             main,
-            text="Bấm ghi âm, nói tiếng Nhật vào micro, bấm dừng để xử lý và xem kết quả bên dưới."
+            text=""
         )
-        sub.pack(anchor="w", pady=(6, 12))
+        self.sub_label.pack(anchor="w", pady=(6, 12))
 
         context_box = ttk.LabelFrame(main, text="Ngữ cảnh bổ sung cho việc dịch")
         context_box.pack(fill="x", pady=(0, 12))
@@ -78,20 +80,57 @@ class VoiceTranslatorApp:
         self.stop_btn = ttk.Button(button_row, text="Dừng và xử lý", command=self.stop_recording, state="disabled")
         self.stop_btn.pack(side="left", padx=10)
 
+        self.toggle_btn = ttk.Button(
+            button_row,
+            text="Chuyển hướng dịch",
+            command=self._toggle_direction,
+        )
+        self.toggle_btn.pack(side="left")
+
+        self.direction_label = ttk.Label(button_row, text="")
+        self.direction_label.pack(side="left", padx=10)
+
         result_area = ttk.Frame(main)
         result_area.pack(fill="both", expand=True)
 
-        left_box = ttk.LabelFrame(result_area, text="Văn bản tiếng Nhật")
-        left_box.pack(side="left", fill="both", expand=True, padx=(0, 8))
+        self.left_box = ttk.LabelFrame(result_area, text="")
+        self.left_box.pack(side="left", fill="both", expand=True, padx=(0, 8))
 
-        self.original_text = scrolledtext.ScrolledText(left_box, wrap="word", height=20)
+        self.original_text = scrolledtext.ScrolledText(self.left_box, wrap="word", height=20)
         self.original_text.pack(fill="both", expand=True, padx=8, pady=8)
 
-        right_box = ttk.LabelFrame(result_area, text="Bản dịch tiếng Việt")
-        right_box.pack(side="left", fill="both", expand=True, padx=(8, 0))
+        self.right_box = ttk.LabelFrame(result_area, text="")
+        self.right_box.pack(side="left", fill="both", expand=True, padx=(8, 0))
 
-        self.translated_text = scrolledtext.ScrolledText(right_box, wrap="word", height=20)
+        self.translated_text = scrolledtext.ScrolledText(self.right_box, wrap="word", height=20)
         self.translated_text.pack(fill="both", expand=True, padx=8, pady=8)
+
+        self._apply_direction_ui()
+
+    def _apply_direction_ui(self):
+        if self.direction_var.get() == "ja-to-vi":
+            self.header_label.config(text="Ghi âm tiếng Nhật, xử lý nhiễu và dịch sang tiếng Việt")
+            self.sub_label.config(
+                text="Bấm ghi âm, nói tiếng Nhật vào micro, bấm dừng để xử lý và xem kết quả bên dưới."
+            )
+            self.left_box.config(text="Văn bản tiếng Nhật")
+            self.right_box.config(text="Bản dịch tiếng Việt")
+            self.direction_label.config(text="Hướng dịch: Nhật -> Việt")
+        else:
+            self.header_label.config(text="Ghi âm tiếng Việt, xử lý nhiễu và dịch sang tiếng Nhật")
+            self.sub_label.config(
+                text="Bấm ghi âm, nói tiếng Việt vào micro, bấm dừng để xử lý và xem kết quả bên dưới."
+            )
+            self.left_box.config(text="Văn bản tiếng Việt")
+            self.right_box.config(text="Bản dịch tiếng Nhật")
+            self.direction_label.config(text="Hướng dịch: Việt -> Nhật")
+
+    def _toggle_direction(self):
+        if self.direction_var.get() == "ja-to-vi":
+            self.direction_var.set("vi-to-ja")
+        else:
+            self.direction_var.set("ja-to-vi")
+        self._apply_direction_ui()
 
     def _set_status(self, text):
         self.status_var.set(text)
@@ -156,6 +195,7 @@ class VoiceTranslatorApp:
             result = self.service.process_audio_file(
                 self.service.raw_path,
                 context=context,
+                direction=self.direction_var.get(),
                 status_callback=status_callback,
             )
 
