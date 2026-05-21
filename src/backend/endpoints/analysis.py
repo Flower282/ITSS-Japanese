@@ -219,6 +219,29 @@ def get_conversation_or_404(
     return conversation
 
 
+def get_latest_displayable_conversation(
+    session: Session,
+) -> AnalysisConversation | None:
+    conversations = session.exec(
+        select(AnalysisConversation)
+        .order_by(AnalysisConversation.created_at.desc())
+    ).all()
+
+    fallback_conversation: AnalysisConversation | None = None
+
+    for conversation in conversations:
+        if conversation.conversation_id is None:
+            continue
+
+        if fallback_conversation is None:
+            fallback_conversation = conversation
+
+        if get_messages_by_conversation(session, conversation.conversation_id):
+            return conversation
+
+    return fallback_conversation
+
+
 def get_messages_by_conversation(
     session: Session,
     conversation_id: int,
@@ -1105,12 +1128,7 @@ async def ensure_latest_analysis(
     lang: str = Query(default="vn", pattern="^(vn|jp)$"),
 ) -> AnalysisResponse:
     with Session(engine) as session:
-        statement = (
-            select(AnalysisConversation)
-            .order_by(AnalysisConversation.created_at.desc())
-            .limit(1)
-        )
-        conversation = session.exec(statement).first()
+        conversation = get_latest_displayable_conversation(session)
 
         if not conversation or conversation.conversation_id is None:
             raise HTTPException(status_code=404, detail="No conversation found")
@@ -1126,12 +1144,7 @@ async def get_latest_analysis(
     lang: str = Query(default="vn", pattern="^(vn|jp)$"),
 ) -> AnalysisResponse:
     with Session(engine) as session:
-        statement = (
-            select(AnalysisConversation)
-            .order_by(AnalysisConversation.created_at.desc())
-            .limit(1)
-        )
-        conversation = session.exec(statement).first()
+        conversation = get_latest_displayable_conversation(session)
 
         if not conversation or conversation.conversation_id is None:
             raise HTTPException(status_code=404, detail="No conversation found")
@@ -1290,12 +1303,7 @@ async def export_latest_analysis_pdf(
     lang: str = Query(default="vn", pattern="^(vn|jp)$"),
 ) -> FileResponse:
     with Session(engine) as session:
-        statement = (
-            select(AnalysisConversation)
-            .order_by(AnalysisConversation.created_at.desc())
-            .limit(1)
-        )
-        conversation = session.exec(statement).first()
+        conversation = get_latest_displayable_conversation(session)
 
         if not conversation or conversation.conversation_id is None:
             raise HTTPException(status_code=404, detail="No conversation found")

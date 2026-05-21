@@ -486,18 +486,42 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
     state: dict[str, Any] = {
         "lang": initial_lang,
         "data": empty_analysis_payload(initial_lang),
+        "active_analysis_id": analysis_id,
+        "history_items": [],
         "loading": True,
         "search_query": "",
         "search_results": [],
+        "synced_latest_route": analysis_id is not None,
     }
 
     async def load_data() -> None:
         state["loading"] = True
         page_shell.refresh()
 
-        state["data"] = await load_analysis_from_api(analysis_id, state["lang"])
+        state["data"] = await load_analysis_from_api(
+            state.get("active_analysis_id"),
+            state["lang"],
+        )
+        current_id = state["data"].get("id")
+        state["active_analysis_id"] = current_id
+        layout_state.selected_history_id = current_id
+        state["history_items"] = [
+            {
+                "id": current_id,
+                "label": state["data"].get("meeting_title", ""),
+                "subtitle": state["data"].get("meeting_date", ""),
+            }
+        ] if current_id else []
         state["loading"] = False
         page_shell.refresh()
+
+        if (
+            analysis_id is None
+            and current_id is not None
+            and not state.get("synced_latest_route")
+        ):
+            state["synced_latest_route"] = True
+            ui.navigate.to(nav(f"/analysis/{current_id}", state["lang"]))
 
     def handle_new_conversation() -> None:
         ui.navigate.to(nav("/translate", state["lang"]))
@@ -544,6 +568,8 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
         if analysis_id is None:
             return
 
+        state["active_analysis_id"] = analysis_id
+        layout_state.selected_history_id = analysis_id
         ui.notify(f"{_('found_label', state['lang'])}: {result.get('meeting_title')}", type="positive")
         ui.navigate.to(nav(f"/analysis/{analysis_id}", state["lang"]))
 
@@ -556,6 +582,10 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
             active_nav="/analysis",
             ui_state=layout_state,
             on_new_conversation=handle_new_conversation,
+            on_history_select=lambda selected_id: ui.navigate.to(
+                nav(f"/analysis/{selected_id}", state["lang"])
+            ),
+            history_items=state.get("history_items", []),
             on_search=handle_search,
             on_locale_click=handle_locale_click,
             on_locale_change=lambda value: asyncio.create_task(handle_language_change(value)),
