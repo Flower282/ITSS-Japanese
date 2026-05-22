@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse
 from src.backend.endpoints import analysis, items, login, translate_routes, users, lang_routes
 from fastapi import Request as FastAPIRequest
 from src.core.config import settings
+from src.db.init_db import init_first_superuser
 from src.core.i18n import (
     get_user_language,
     set_user_language,
@@ -34,12 +35,17 @@ from src.frontend.pages import (
 )
 
 
+def on_startup() -> None:
+    """Create or sync the first superuser from environment variables."""
+    init_first_superuser()
+
+
 async def on_shutdown():
     """Actions to perform on application shutdown."""
     print("INFO:     Application shutting down.")
 
 
-app.on_shutdown(on_shutdown)
+app.on_startup(on_startup)
 app.on_shutdown(on_shutdown)
 app.add_static_files("/images", str(ROOT_DIR / "images"))
 

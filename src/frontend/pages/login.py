@@ -1,7 +1,10 @@
-from fastapi import Request
+from fastapi import HTTPException, Request
 from nicegui import app, ui
+from src.core import security
+from src.db.session import get_db_context
 from src.frontend import state
 from src.frontend.components import notifications
+from src.repositories.user import user_repo
 
 GOOGLE_G_SVG = """
 <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -13,9 +16,41 @@ GOOGLE_G_SVG = """
 """
 
 
+def _complete_login(user) -> None:
+    state.set_auth(
+        {
+            "access_token": security.create_access_token(user.id),
+            "token_type": "bearer",
+        }
+    )
+    app.storage.user["is_superuser"] = user.is_superuser
+    state.set_profile(
+        {
+            "name": user.full_name or user.email,
+            "email": user.email,
+        }
+    )
+    ui.navigate.to("/")
+
+
+async def login_with_password(email_input: ui.input, password_input: ui.input) -> None:
+    try:
+        with get_db_context() as db:
+            user = user_repo.authenticate(
+                db=db,
+                email=email_input.value.strip(),
+                password=password_input.value,
+            )
+        _complete_login(user)
+    except HTTPException as e:
+        notifications.show_error(e.detail)
+    except Exception:
+        notifications.show_error("Đăng nhập thất bại. Vui lòng thử lại.")
+
+
 @ui.page("/login")
 def login_page(request: Request):
-    """Defines the Google-based login page."""
+    """Login page: Google OAuth or email/password (superuser and local accounts)."""
     if state.get_auth():
         ui.navigate.to("/")
         return
@@ -44,7 +79,7 @@ def login_page(request: Request):
         "min-h-screen w-full items-center justify-center bg-slate-50 p-6"
     ):
         with ui.card().classes(
-            "w-full max-w-md items-center rounded-2xl bg-white p-8 shadow-md"
+            "w-full max-w-md rounded-2xl bg-white p-8 shadow-md"
         ):
             with ui.column().classes("items-center w-full text-center gap-2"):
                 ui.image("/images/logoitsss.png").classes(
@@ -56,6 +91,33 @@ def login_page(request: Request):
                 )
 
             ui.separator().classes("my-6 w-full")
+
+            with ui.column().classes("w-full gap-3"):
+                email = (
+                    ui.input("Email")
+                    .props("autocomplete=username outlined dense")
+                    .classes("w-full")
+                )
+                password = (
+                    ui.input("Mật khẩu")
+                    .props("type=password autocomplete=current-password outlined dense")
+                    .classes("w-full")
+                )
+                ui.button(
+                    "Đăng nhập",
+                    on_click=lambda: login_with_password(email, password),
+                ).props("color=primary unelevated").classes("w-full mt-1")
+                email.on(
+                    "keydown.enter", lambda: login_with_password(email, password)
+                )
+                password.on(
+                    "keydown.enter", lambda: login_with_password(email, password)
+                )
+
+            with ui.row().classes("w-full items-center gap-3 my-4"):
+                ui.separator().classes("flex-grow")
+                ui.label("hoặc").classes("text-slate-400 text-sm")
+                ui.separator().classes("flex-grow")
 
             google_button = ui.element("button").classes(
                 "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 transition hover:bg-slate-50"
