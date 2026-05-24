@@ -80,7 +80,7 @@ async def translate_test_page() -> None:
                         const formData = new FormData();
                         formData.append('audio', blob, 'record.webm');
 
-                        const response = await fetch('/api/v1/translate/translate-audio', {
+                        const response = await fetch('/api/v1/translate/audio', {
                             method: 'POST',
                             body: formData,
                         });

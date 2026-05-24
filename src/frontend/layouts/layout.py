@@ -89,6 +89,7 @@ def base_layout(
     history_items: list[dict] | None = None,
     search_history: list[str] | None = None,
     user_subtitle: str | None = None,
+    on_logo_click: Callable[[], None] | None = None,
 ) -> Iterator[None]:
     if not state.get_auth():
         ui.navigate.to("/login")
@@ -154,11 +155,15 @@ def base_layout(
         ui_state.selected_history_id = history_id
 
         if on_history_select:
-            on_history_select(history_id)
+            result = on_history_select(history_id)
+            if inspect.isawaitable(result):
+                asyncio.create_task(result)
 
     def handle_new_conversation() -> None:
         if on_new_conversation:
-            on_new_conversation()
+            result = on_new_conversation()
+            if inspect.isawaitable(result):
+                asyncio.create_task(result)
         else:
             ui.navigate.to(nav('/translate', lang))
 
@@ -169,7 +174,14 @@ def base_layout(
             with ui.column().classes(
                 "w-72 shrink-0 bg-white border-r border-slate-100 p-4 gap-6"
             ):
-                with ui.row().classes("items-center gap-2"):
+                with ui.row().classes("items-center gap-2 cursor-pointer").on(
+                    "click",
+                    lambda: (
+                        on_logo_click()
+                        if on_logo_click
+                        else ui.navigate.to(nav("/", lang))
+                    ),
+                ):
                     ui.image("/images/logoitsss.png").classes(
                         "h-9 w-9 rounded-lg shadow-sm"
                     )
