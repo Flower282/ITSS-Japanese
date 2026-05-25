@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from nicegui import ui
 
 from src.frontend.components.components import (
@@ -16,6 +17,7 @@ from src.db.session import get_db_context
 from src.repositories.cultural_assistant_repo import (
     get_marked_messages_with_analysis,
     get_culture_assistant_insight,
+    get_user_learning_roadmap,
 )
 
 
@@ -28,6 +30,8 @@ def culture_page() -> None:
 
     marked_scenarios_data = []
     ai_insight_text = ""
+    roadmap_loading = True
+    roadmap_text = ""
     try:
         with get_db_context() as db:
             marked_scenarios_data = get_marked_messages_with_analysis(db)
@@ -194,11 +198,63 @@ def culture_page() -> None:
                 "accent_classes": accent_classes,
             })
 
+    @ui.refreshable
+    def render_roadmap_content() -> None:
+        nonlocal roadmap_loading, roadmap_text
+        if roadmap_loading:
+            with ui.column().classes("w-full items-center justify-center py-16 gap-4"):
+                ui.spinner(size="xl", color="primary", thickness=4)
+                ui.label("Đang phân tích hội thoại và lập lộ trình học tập...").classes("text-slate-500 text-sm animate-pulse font-medium")
+        else:
+            if not roadmap_text:
+                ui.label("Không thể tạo lộ trình học tập lúc này.").classes("text-rose-500 py-6 text-center w-full font-medium")
+                return
+
+            with ui.column().classes("w-full gap-4 max-h-[450px] overflow-y-auto pr-2"):
+                ui.markdown(roadmap_text).classes(
+                    "text-sm text-slate-700 leading-relaxed markdown-body "
+                    "prose prose-slate max-w-full"
+                )
+
+    with ui.dialog().classes("rounded-2xl") as roadmap_dialog, ui.card().classes(
+        "w-[650px] max-w-full p-6 rounded-2xl border border-slate-100 shadow-2xl bg-white overflow-hidden"
+    ):
+        with ui.row().classes("w-full items-center justify-between mb-4 border-b border-slate-100 pb-2"):
+            with ui.row().classes("items-center gap-2.5"):
+                icon_box = ui.element("div").classes(
+                    "h-10 w-10 rounded-xl bg-blue-50 text-blue-600 "
+                    "flex items-center justify-center flex-shrink-0"
+                )
+                with icon_box:
+                    ui.icon("auto_awesome", color="primary").classes("text-xl")
+                ui.label("Lộ trình Học tập Gợi ý (User #4)").classes("text-base font-bold text-slate-800")
+            ui.button(icon="close", on_click=roadmap_dialog.close).props('flat round').classes(
+                "text-slate-400 hover:text-slate-600"
+            )
+        
+        render_roadmap_content()
+
     def handle_new_conversation() -> None:
         ui.navigate.to("/translate")
 
-    def handle_roadmap() -> None:
-        ui.notify(_('showed_roadmap', lang), type="info")
+    async def handle_roadmap() -> None:
+        nonlocal roadmap_loading, roadmap_text
+        roadmap_dialog.open()
+        roadmap_loading = True
+        render_roadmap_content.refresh()
+        
+        def fetch():
+            with get_db_context() as db:
+                return get_user_learning_roadmap(db, user_id=4)
+                
+        try:
+            roadmap_text = await asyncio.to_thread(fetch)
+        except Exception as e:
+            print(f"Error fetching roadmap: {e}")
+            roadmap_text = "Không thể tải được lộ trình học tập do lỗi hệ thống."
+            
+        roadmap_loading = False
+        render_roadmap_content.refresh()
 
     def handle_sync() -> None:
         ui.notify(_('updated_from_conv', lang), type="positive")

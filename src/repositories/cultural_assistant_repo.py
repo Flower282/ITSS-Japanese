@@ -5,7 +5,7 @@ import httpx
 from datetime import datetime
 from typing import List
 from sqlalchemy.orm import Session
-from src.models.analysis_models import AnalysisMessage, AnalysisLog, AnalysisConversation
+from src.models.analysis_models import AnalysisMessage, AnalysisLog, AnalysisConversation, LearningRoute
 from src.core.config import settings
 from src.core.i18n import _
 
@@ -322,6 +322,128 @@ Yêu cầu:
     except Exception as e:
         print(f"Error generating dynamic cultural insight: {e}")
         return _('ai_culture_insight', lang)
+
+
+def get_user_learning_roadmap(db: Session, user_id: int = 4) -> str:
+    """
+    Fetch or generate a personalized markdown learning roadmap specifically for a user (defaults to user_id=4).
+    Saves and caches the generated roadmap in the `learning_route` table.
+    """
+    # 1. Check if already cached in DB table `learning_route`
+    cached_route = db.query(LearningRoute).filter(
+        LearningRoute.user_id == user_id
+    ).order_by(LearningRoute.created_at.desc()).first()
+    
+    if cached_route and cached_route.route_text:
+        return cached_route.route_text
+
+    # 2. Fetch all messages written by this user
+    messages = db.query(AnalysisMessage).filter(
+        AnalysisMessage.user_id == user_id,
+        AnalysisMessage.is_deleted == False
+    ).order_by(AnalysisMessage.created_at.asc()).all()
+
+    formatted_list = []
+    for msg in messages:
+        text = msg.text
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict):
+                text = parsed.get("text") or parsed.get("translation") or text
+        except Exception:
+            pass
+        formatted_list.append(f"- {text}")
+
+    formatted_messages = "\n".join(formatted_list[-30:]) # Use latest 30 messages
+
+    # Default fallback if no messages are found
+    if not messages:
+        fallback_text = (
+            "### Lộ trình học tập giao tiếp tiếng Nhật\n\n"
+            "Chưa có đủ lịch sử tin nhắn của bạn để phân tích cá nhân hóa. Dưới đây là khuyến nghị chung:\n\n"
+            "1. **Tập trung vào phản hồi tự nhiên**: Luyện tập sử dụng kính ngữ cơ bản thay vì dịch thô từ tiếng Việt.\n"
+            "2. **Làm rõ cam kết công việc**: Hạn chế nói do dự 'sẽ cố gắng' mà dùng các mốc thời gian cụ thể.\n"
+            "3. **Tự nhiên hóa câu văn**: Học các cụm từ bản xứ chuyên biệt cho IT startup."
+        )
+        return fallback_text
+
+    # 3. Formulate the Groq prompt
+    api_key = settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY")
+    if not api_key:
+        print("Error: Missing GROQ_API_KEY for dynamic roadmap generation.")
+        return "### Lộ trình học tập cá nhân hóa\n\nKhông có API key của Groq để khởi tạo lộ trình lúc này."
+
+    system_prompt = (
+        "Bạn là chuyên gia tư vấn văn hóa và phong cách giao tiếp Việt - Nhật trong môi trường công nghệ IT startup."
+    )
+    prompt = f"""
+Dưới đây là danh sách các tin nhắn/phát ngôn tiếng Nhật của lập trình viên Việt Nam có ID {user_id}:
+{formatted_messages}
+
+Hãy phân tích phong cách viết và các điểm chưa tốt của họ (ví dụ: dùng sai kính ngữ, lạm dụng từ xin lỗi, diễn đạt thiếu cam kết, dịch thô cứng, v.v.).
+Dựa trên phân tích đó, hãy soạn thảo một **LỘ TRÌNH HỌC TẬP GIAO TIẾP CÁ NHÂN HÓA** chi tiết bằng **tiếng Việt**, định dạng **Markdown** sạch sẽ và trực quan.
+
+Lộ trình cần bao gồm:
+1. **Phân tích tổng quan**: Nhận xét ngắn gọn về xu hướng sử dụng tiếng Nhật hiện tại của họ qua tin nhắn.
+2. **Kế hoạch cải thiện chi tiết gồm 3 bước hành động cụ thể**:
+   - **Bước 1**: Tập trung khắc phục điểm yếu lớn nhất (kèm giải thích hành động luyện tập và ví dụ đối sánh thực hành cụ thể).
+   - **Bước 2**: Tự nhiên hóa biểu đạt (kèm hành động và ví dụ).
+   - **Bước 3**: Chuyên nghiệp hóa phong cách giao tiếp IT (kèm hành động và ví dụ).
+
+Yêu cầu định dạng:
+- Trả về nội dung trực tiếp bằng tiếng Việt chuẩn Markdown.
+- Không bọc trong code block (không dùng ```markdown), không thêm tiêu đề hay lời dẫn dắt thừa thãi nào ngoài nội dung lộ trình.
+"""
+
+    try:
+        with httpx.Client(timeout=30) as client:
+            response = client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json; charset=utf-8",
+                },
+                json={
+                    "model": os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": system_prompt,
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt,
+                        },
+                    ],
+                    "temperature": 0.3,
+                },
+            )
+            
+        if response.status_code >= 400:
+            print(f"Groq API error when generating roadmap: {response.text}")
+            return "### Lộ trình học tập cá nhân hóa\n\nGặp lỗi khi kết nối API Groq để phân tích lộ trình."
+            
+        content = response.json()["choices"][0]["message"]["content"].strip()
+        
+        # Clean markdown wrappers if returned
+        if content.startswith("```"):
+            content = re.sub(r"^```markdown", "", content, flags=re.IGNORECASE).strip()
+            content = re.sub(r"^```", "", content).strip()
+            content = re.sub(r"```$", "", content).strip()
+            
+        # 4. Save cache to `learning_route` table
+        db_route = LearningRoute(
+            user_id=user_id,
+            route_text=content,
+            created_at=datetime.utcnow()
+        )
+        db.add(db_route)
+        db.commit()
+        
+        return content
+    except Exception as e:
+        print(f"Error generating dynamic learning roadmap: {e}")
+        return "### Lộ trình học tập cá nhân hóa\n\nGặp sự cố hệ thống khi tạo lộ trình."
 
 
 # Unused/broken models in database schema:
