@@ -12,6 +12,11 @@ from src.frontend.components.components import (
 from src.frontend.layouts.layout import base_layout
 from src.frontend.ui_state import UiState
 from src.core.i18n import _, get_user_language, validate_language_or_default
+from src.db.session import get_db_context
+from src.repositories.cultural_assistant_repo import (
+    get_marked_messages_with_analysis,
+    get_culture_assistant_insight,
+)
 
 
 @ui.page("/culture")
@@ -20,6 +25,15 @@ def culture_page() -> None:
 
     stored_lang = get_user_language()
     lang = validate_language_or_default(stored_lang)
+
+    marked_scenarios_data = []
+    ai_insight_text = ""
+    try:
+        with get_db_context() as db:
+            marked_scenarios_data = get_marked_messages_with_analysis(db)
+            ai_insight_text = get_culture_assistant_insight(db, lang)
+    except Exception as e:
+        print(f"Error fetching marked messages with analysis: {e}")
 
     if lang == 'jp':
         handbook_items = [
@@ -42,24 +56,62 @@ def culture_page() -> None:
                 "link_href": "#",
             },
         ]
-        scenarios = [
-            {
-                "index": 1,
-                "category": "間接的なコミュニケーション",
-                "phrase": '相手が言いました: "ちょっと考えさせてください"',
-                "meaning": "これは多くの場合、時間が必要なのではなく、丁寧な断り方です。",
-                "response": "代替案を準備するか、現在の懸念事項について穏やかに尋ねる。",
-                "accent_classes": "border-amber-100 bg-amber-50/70",
-            },
-            {
-                "index": 2,
-                "category": "時間管理",
-                "phrase": '"なるべく早く" というデッドラインが設定された',
-                "meaning": "日本の仕事文化では、これは通常「今すぐ」、最優先事項を意味します。",
-                "response": "すぐに取り掛かるか、具体的な完了時間を報告する。",
-                "accent_classes": "border-rose-100 bg-rose-50/60",
-            },
-        ]
+        scenarios = []
+        num_scenarios = max(2, len(marked_scenarios_data))
+        for i in range(num_scenarios):
+            idx = i + 1
+            has_data = i < len(marked_scenarios_data)
+            
+            phrase_val = marked_scenarios_data[i]["phrase"] if has_data else None
+            meaning_val = marked_scenarios_data[i]["meaning"] if has_data else None
+            response_val = marked_scenarios_data[i]["response"] if has_data else None
+            category_val = marked_scenarios_data[i]["category"] if has_data else None
+
+            # Determine category and styling dynamically based on category_val
+            if has_data and category_val == "QUẢN LÝ THỜI GIAN":
+                category = "時間管理"
+                accent_classes = "border-rose-100 bg-rose-50/60"
+            elif has_data and category_val == "GIAO TIẾP GIÁN TIẾP":
+                category = "間接的なコミュニケーション"
+                accent_classes = "border-amber-100 bg-amber-50/70"
+            else:
+                # Default fallback values for idx 1 and 2 if no dynamic data is available
+                if idx == 1:
+                    category = "間接的なコミュニケーション"
+                    accent_classes = "border-amber-100 bg-amber-50/70"
+                else:
+                    category = "時間管理"
+                    accent_classes = "border-rose-100 bg-rose-50/60"
+
+            phrase = phrase_val
+            if not phrase:
+                if idx == 1:
+                    phrase = '相手が言いました: "ちょっと考えさせてください"'
+                else:
+                    phrase = '"なるべく早く" というデッドラインが設定された'
+
+            meaning = meaning_val
+            if not meaning:
+                if idx == 1:
+                    meaning = "これは多くの場合、時間が必要なのではなく、丁寧な断り方です。"
+                else:
+                    meaning = "日本の仕事文化では、origin/HDAこれは通常「今すぐ」、最優先事項を意味します。"
+                    
+            response = response_val
+            if not response:
+                if idx == 1:
+                    response = "代替案を準備するか、現在の懸念事項について穏やかに尋ねる。"
+                else:
+                    response = "すぐに取り掛かるか、具体的な完了時間を報告する。"
+
+            scenarios.append({
+                "index": idx,
+                "category": category,
+                "phrase": phrase,
+                "meaning": meaning,
+                "response": response,
+                "accent_classes": accent_classes,
+            })
     else:
         handbook_items = [
             {
@@ -81,30 +133,65 @@ def culture_page() -> None:
                 "link_href": "#",
             },
         ]
-        scenarios = [
-            {
-                "index": 1,
-                "category": "GIAO TIẾP GIÁN TIẾP",
-                "phrase": 'Đối tác nói: "Chotto kangaesete kudasai" (Để tôi suy nghĩ một chút)',
-                "meaning": "Đây thường là cách từ chối lịch sự, không phải thực sự cần thêm thời gian suy nghĩ.",
-                "response": "Nên chuẩn bị phương án thay thế hoặc nhẹ nhàng hỏi về các vướng mắc hiện tại.",
-                "accent_classes": "border-amber-100 bg-amber-50/70",
-            },
-            {
-                "index": 2,
-                "category": "QUẢN LÝ THỜI GIAN",
-                "phrase": 'Deadline được đưa ra "narubeku hayaku" (Càng sớm càng tốt)',
-                "meaning": "Trong văn hóa làm việc Nhật, đây thường có nghĩa là NGAY LẬP TỨC, ưu tiên cao nhất.",
-                "response": "Cần bắt tay vào làm ngay hoặc báo cáo thời gian hoàn thành cụ thể.",
-                "accent_classes": "border-rose-100 bg-rose-50/60",
-            },
-        ]
+        scenarios = []
+        num_scenarios = max(2, len(marked_scenarios_data))
+        for i in range(num_scenarios):
+            idx = i + 1
+            has_data = i < len(marked_scenarios_data)
+            
+            phrase_val = marked_scenarios_data[i]["phrase"] if has_data else None
+            meaning_val = marked_scenarios_data[i]["meaning"] if has_data else None
+            response_val = marked_scenarios_data[i]["response"] if has_data else None
+            category_val = marked_scenarios_data[i]["category"] if has_data else None
+
+            # Determine category and styling dynamically based on category_val
+            if has_data and category_val == "QUẢN LÝ THỜI GIAN":
+                category = "QUẢN LÝ THỜI GIAN"
+                accent_classes = "border-rose-100 bg-rose-50/60"
+            elif has_data and category_val == "GIAO TIẾP GIÁN TIẾP":
+                category = "GIAO TIẾP GIÁN TIẾP"
+                accent_classes = "border-amber-100 bg-amber-50/70"
+            else:
+                # Default fallback values for idx 1 and 2 if no dynamic data is available
+                if idx == 1:
+                    category = "GIAO TIẾP GIÁN TIẾP"
+                    accent_classes = "border-amber-100 bg-amber-50/70"
+                else:
+                    category = "QUẢN LÝ THỜI GIAN"
+                    accent_classes = "border-rose-100 bg-rose-50/60"
+
+            phrase = phrase_val
+            if not phrase:
+                if idx == 1:
+                    phrase = 'Đối tác nói: "Chotto kangaesete kudasai" (Để tôi suy nghĩ một chút)'
+                else:
+                    phrase = 'Deadline được đưa ra "narubeku hayaku" (Càng sớm càng tốt)'
+
+            meaning = meaning_val
+            if not meaning:
+                if idx == 1:
+                    meaning = "Đây thường là cách từ chối lịch sự, không phải thực sự cần thêm thời gian suy nghĩ."
+                else:
+                    meaning = "Trong văn hóa làm việc Nhật, đây thường có nghĩa là NGAY LẬP TỨC, ưu tiên cao nhất."
+                    
+            response = response_val
+            if not response:
+                if idx == 1:
+                    response = "Nên chuẩn bị phương án thay thế hoặc nhẹ nhàng hỏi về các vướng mắc hiện tại."
+                else:
+                    response = "Cần bắt tay vào làm ngay hoặc báo cáo thời gian hoàn thành cụ thể."
+
+            scenarios.append({
+                "index": idx,
+                "category": category,
+                "phrase": phrase,
+                "meaning": meaning,
+                "response": response,
+                "accent_classes": accent_classes,
+            })
 
     def handle_new_conversation() -> None:
         ui.navigate.to("/translate")
-
-    def handle_recommended_lesson() -> None:
-        ui.notify(_('opened_lesson', lang), type="info")
 
     def handle_roadmap() -> None:
         ui.notify(_('showed_roadmap', lang), type="info")
@@ -139,22 +226,6 @@ def culture_page() -> None:
                     subtitle=_('culture_subtitle', lang),
                 )
 
-            with ui.row().classes("items-center gap-2"):
-                ui.label(_('new_badge', lang)).classes(
-                    "text-[10px] font-semibold px-2 py-0.5 rounded-full "
-                    "bg-amber-100 text-amber-700"
-                )
-                action_button(
-                    label=_('recommended_lesson_btn', lang),
-                    icon="school",
-                    variant="secondary",
-                    on_click=handle_recommended_lesson,
-                    extra_classes=(
-                        "border-amber-200 bg-amber-50 text-amber-700 "
-                        "hover:bg-amber-100"
-                    ),
-                )
-
         with ui.row().classes("w-full items-start gap-6"):
             with ui.column().classes("w-full max-w-[360px] gap-4"):
                 with ui.element("div").classes(
@@ -170,9 +241,10 @@ def culture_page() -> None:
                         ui.label(_('ai_culture_assistant', lang)).classes(
                             "text-sm font-semibold text-slate-800"
                         )
-                    ui.label(_('ai_culture_insight', lang)).classes(
-                        "text-sm text-slate-600 mt-2"
-                    )
+                    with ui.element("div").classes("max-h-[110px] overflow-y-auto mt-2 pr-1"):
+                        ui.label(ai_insight_text or _('ai_culture_insight', lang)).classes(
+                            "text-sm text-slate-600"
+                        )
 
                     action_button(
                         label=_('view_roadmap', lang),
