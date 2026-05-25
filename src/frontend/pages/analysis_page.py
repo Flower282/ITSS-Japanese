@@ -6,10 +6,11 @@ import unicodedata
 from typing import Any
 from urllib.parse import urlencode
 
-import httpx
 from nicegui import ui
 
+from src.frontend.api_client import api_get
 from src.frontend.components.components import action_button
+from src.frontend.services.conversation_service import load_conversation_history
 from src.frontend.layouts.layout import base_layout
 from src.frontend.ui_state import UiState
 from src.core.i18n import _, get_user_language, validate_language_or_default, nav
@@ -205,25 +206,13 @@ def normalize_analysis_payload(data: dict[str, Any], lang: str) -> dict[str, Any
 
 
 async def fetch_json_from_api(url: str) -> Any:
-    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", timeout=30) as client:
-        response = await client.get(url, headers={"Accept": "application/json"})
-
-    if response.status_code == 404:
-        raise RuntimeError("analysis_not_found")
-
-    if response.status_code >= 400:
-        detail = response.text
-
-        try:
-            payload = response.json()
-            if isinstance(payload, dict):
-                detail = str(payload.get("detail") or detail)
-        except Exception:
-            pass
-
-        raise RuntimeError(detail)
-
-    return response.json()
+    try:
+        return await api_get(url, timeout=60.0)
+    except Exception as exc:
+        detail = str(getattr(exc, "detail", None) or exc)
+        if "404" in detail or "not found" in detail.lower():
+            raise RuntimeError("analysis_not_found") from exc
+        raise RuntimeError(detail) from exc
 
 
 async def load_analysis_from_api(
@@ -498,6 +487,11 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
         state["loading"] = True
         page_shell.refresh()
 
+        try:
+            state["history_items"] = await load_conversation_history()
+        except Exception:
+            state["history_items"] = []
+
         state["data"] = await load_analysis_from_api(
             state.get("active_analysis_id"),
             state["lang"],
@@ -505,13 +499,17 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
         current_id = state["data"].get("id")
         state["active_analysis_id"] = current_id
         layout_state.selected_history_id = current_id
-        state["history_items"] = [
-            {
-                "id": current_id,
-                "label": state["data"].get("meeting_title", ""),
-                "subtitle": state["data"].get("meeting_date", ""),
-            }
-        ] if current_id else []
+        if current_id and not any(
+            h.get("id") == current_id for h in state["history_items"]
+        ):
+            state["history_items"].insert(
+                0,
+                {
+                    "id": current_id,
+                    "label": state["data"].get("meeting_title", ""),
+                    "subtitle": state["data"].get("meeting_date", ""),
+                },
+            )
         state["loading"] = False
         page_shell.refresh()
 

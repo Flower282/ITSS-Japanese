@@ -5,7 +5,8 @@ from pydantic_settings import BaseSettings
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
-ENV_FILE = ROOT_DIR / ".env"
+_env_candidates = (ROOT_DIR / ".env", ROOT_DIR.parent / ".env")
+ENV_FILE = next((p for p in _env_candidates if p.exists()), _env_candidates[0])
 
 
 class Settings(BaseSettings):

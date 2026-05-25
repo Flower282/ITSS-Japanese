@@ -1,5 +1,6 @@
 from fastapi import Request
 from nicegui import app, ui
+
 from src.frontend import state
 from src.frontend.components import notifications
 
@@ -15,7 +16,7 @@ GOOGLE_G_SVG = """
 
 @ui.page("/login")
 def login_page(request: Request):
-    """Defines the Google-based login page."""
+    """Login page using Google OAuth only."""
     if state.get_auth():
         ui.navigate.to("/")
         return
@@ -44,7 +45,7 @@ def login_page(request: Request):
         "min-h-screen w-full items-center justify-center bg-slate-50 p-6"
     ):
         with ui.card().classes(
-            "w-full max-w-md items-center rounded-2xl bg-white p-8 shadow-md"
+            "w-full max-w-md rounded-2xl bg-white p-8 shadow-md"
         ):
             with ui.column().classes("items-center w-full text-center gap-2"):
                 ui.image("/images/logoitsss.png").classes(

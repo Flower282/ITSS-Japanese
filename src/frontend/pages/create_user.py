@@ -1,17 +1,16 @@
 from fastapi import HTTPException
 from nicegui import app, ui
-from src.models import UserCreate
-from src.db.session import get_db_context
-from src.repositories.user import user_repo
-from src.frontend.layouts.default import dashboard_frame
-from src.frontend.components.auth_utils import get_current_user_from_state
-from src.frontend.components.form_utils import enable_button_on_user_inputs
+
+from src.frontend.api_client import api_post_json
 from src.frontend.components import notifications
+from src.frontend.components.form_utils import enable_button_on_user_inputs
+from src.frontend.layouts.default import dashboard_frame
+from src.models import UserCreate
 
 
 @ui.page("/users/create")
 def create_user_page():
-    """Defines the page for creating a new user."""
+    """Create user via REST API /api/v1/user/."""
     with dashboard_frame(title="Create a User"):
         if not app.storage.user.get("is_superuser"):
             ui.label("You don't have permission to access this page.").classes(
@@ -55,27 +54,19 @@ def create_user_page():
                 lambda: enable_button_on_user_inputs([email, password], user_button),
             )
 
-            # Set initial button state
             enable_button_on_user_inputs([email, password], user_button)
 
 
 async def create_user(
     email_input: ui.input, password_input: ui.input, is_superuser_checkbox: ui.checkbox
 ):
-    """Creates a new user using data from the input elements."""
     try:
-        with get_db_context() as db:
-            current_user = get_current_user_from_state(db)
-            if not current_user.is_superuser:
-                raise HTTPException(
-                    status_code=403, detail="You do not have enough privileges."
-                )
-            user_in = UserCreate(
-                email=email_input.value,
-                password=password_input.value,
-                is_superuser=is_superuser_checkbox.value,
-            )
-            user_repo.register(db=db, obj_in=user_in)
+        user_in = UserCreate(
+            email=email_input.value,
+            password=password_input.value,
+            is_superuser=is_superuser_checkbox.value,
+        )
+        await api_post_json("/api/v1/user/", user_in.model_dump())
 
         notifications.show_success(f"User '{email_input.value}' created successfully!")
         email_input.value = ""

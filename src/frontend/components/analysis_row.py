@@ -11,6 +11,7 @@ def analysis_row(
     link_label: str,
     status_label: str,
     status_classes: str,
+    link_href: str = "#",
 ) -> ui.element:
     with ui.element("div").classes(
         "w-full rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
@@ -26,7 +27,7 @@ def analysis_row(
                 with ui.column().classes("gap-1"):
                     ui.label(title).classes("text-sm font-semibold text-slate-800")
                     ui.label(description).classes("text-xs text-slate-500 max-w-xl")
-                    ui.link(link_label, "#").classes("text-xs text-blue-600")
+                    ui.link(link_label, link_href).classes("text-xs text-blue-600")
 
             ui.label(status_label).classes(
                 f"text-xs font-semibold px-2 py-1 rounded-full {status_classes}"

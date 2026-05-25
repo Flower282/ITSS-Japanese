@@ -1,16 +1,15 @@
 from fastapi import HTTPException
 from nicegui import ui
-from src.models import ItemCreate, ItemUpdate
-from src.repositories.item import item_repo
-from src.db.session import get_db_context
+
+from src.frontend.api_client import api_delete, api_get, api_post_json, api_put_json
 from src.frontend.components import notifications
-from src.frontend.components.auth_utils import get_current_user_from_state
 from src.frontend.layouts.default import dashboard_frame
+from src.models import ItemCreate, ItemUpdate
 
 
 @ui.page("/items")
 def items_page():
-    """Defines the page for displaying and creating user items."""
+    """Items page backed by REST API /api/v1/items."""
     with dashboard_frame(title="My Items"):
         items_grid = ui.grid().classes(
             "w-full gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
@@ -34,42 +33,43 @@ def items_page():
 
 
 async def load_items(grid: ui.grid):
-    """Fetches items by directly calling repository functions and populates the grid."""
     try:
-        with get_db_context() as db:
-            current_user = get_current_user_from_state(db)
-            items = item_repo.get_for_user(db=db, current_user=current_user)
+        items = await api_get("/api/v1/items/")
+        if not isinstance(items, list):
+            items = []
 
         grid.clear()
         with grid:
             for item in items:
                 with ui.card().classes("p-0"):
-                    ui.image(f"https://picsum.photos/600/400?random={item.id}")
+                    ui.image(f"https://picsum.photos/600/400?random={item['id']}")
                     with ui.column().classes("p-4 w-full"):
-                        ui.label(item.title).classes("text-xl font-semibold")
+                        ui.label(item.get("title", "")).classes(
+                            "text-xl font-semibold"
+                        )
                         ui.separator().classes("w-full my-1")
-                        ui.label(item.description).classes("text-sm line-clamp-3")
+                        ui.label(item.get("description") or "").classes(
+                            "text-sm line-clamp-3"
+                        )
 
                         with ui.row().classes("w-full justify-end mt-4 gap-2"):
-                            # Modify Button - opens its own dialog
                             with (
                                 ui.dialog() as modify_dialog,
                                 ui.card().classes("min-w-[600px]"),
                             ):
                                 ui.label("Modify Item").classes("text-h6")
                                 modify_title = ui.input(
-                                    "Title", value=item.title
+                                    "Title", value=item.get("title", "")
                                 ).classes("w-full")
                                 modify_desc = ui.textarea(
-                                    "Description", value=item.description
+                                    "Description", value=item.get("description") or ""
                                 ).classes("w-full")
-                                # The lambda captures the item's specific data for the handler
                                 ui.button(
                                     "Save",
                                     on_click=lambda i=item,
                                     t=modify_title,
                                     d=modify_desc: update_item(
-                                        i.id, t, d, modify_dialog, grid
+                                        i["id"], t, d, modify_dialog, grid
                                     ),
                                 ).classes("w-full")
 
@@ -77,10 +77,9 @@ async def load_items(grid: ui.grid):
                                 "flat dense"
                             )
 
-                            # Delete Button - opens a confirmation dialog
                             with ui.dialog() as confirm_dialog, ui.card():
                                 ui.label(
-                                    f"Are you sure you want to delete '{item.title}'?"
+                                    f"Are you sure you want to delete '{item.get('title')}'?"
                                 )
                                 with ui.row().classes("w-full justify-end"):
                                     ui.button(
@@ -88,12 +87,11 @@ async def load_items(grid: ui.grid):
                                         on_click=confirm_dialog.close,
                                         color="gray-100",
                                     )
-                                    # The lambda captures the specific item_id for the handler
                                     ui.button(
                                         "Yes",
-                                        on_click=lambda item_id=item.id: delete_item(
-                                            item_id, grid
-                                        ),
+                                        on_click=lambda item_id=item[
+                                            "id"
+                                        ]: delete_item(item_id, grid),
                                         color="red",
                                     )
 
@@ -109,13 +107,14 @@ async def load_items(grid: ui.grid):
 async def create_item(
     title_input: ui.input, desc_input: ui.textarea, dialog: ui.dialog, grid: ui.grid
 ):
-    """Creates a new item by directly calling repository functions."""
     try:
-        with get_db_context() as db:
-            current_user = get_current_user_from_state(db)
-            item_in = ItemCreate(title=title_input.value, description=desc_input.value)
-            item_repo.create_for_user(db=db, obj_in=item_in, current_user=current_user)
-
+        item_in = ItemCreate(
+            title=title_input.value, description=desc_input.value or None
+        )
+        await api_post_json(
+            "/api/v1/item/",
+            item_in.model_dump(exclude_unset=True),
+        )
         notifications.show_success("Item created successfully!")
         dialog.close()
         await load_items(grid)
@@ -132,22 +131,17 @@ async def update_item(
     dialog: ui.dialog,
     grid: ui.grid,
 ):
-    """Updates an item by directly calling repository functions."""
     try:
-        with get_db_context() as db:
-            current_user = get_current_user_from_state(db)
-            item_in = ItemUpdate(title=title_input.value, description=desc_input.value)
-            item_repo.update_for_user(
-                db=db,
-                item_id=item_id,
-                obj_in=item_in,
-                current_user=current_user,
-            )
-
+        item_in = ItemUpdate(
+            title=title_input.value, description=desc_input.value or None
+        )
+        await api_put_json(
+            f"/api/v1/item/{item_id}",
+            item_in.model_dump(exclude_unset=True),
+        )
         notifications.show_success("Item updated successfully.")
         dialog.close()
         await load_items(grid)
-
     except HTTPException as e:
         notifications.show_error(e.detail)
     except Exception as e:
@@ -155,15 +149,10 @@ async def update_item(
 
 
 async def delete_item(item_id: int, grid: ui.grid):
-    """Deletes an item by directly calling repository functions."""
     try:
-        with get_db_context() as db:
-            current_user = get_current_user_from_state(db)
-            item_repo.delete_for_user(db=db, item_id=item_id, current_user=current_user)
-
+        await api_delete(f"/api/v1/item/{item_id}")
         notifications.show_success("Item deleted successfully.")
         await load_items(grid)
-
     except HTTPException as e:
         notifications.show_error(e.detail)
     except Exception as e:

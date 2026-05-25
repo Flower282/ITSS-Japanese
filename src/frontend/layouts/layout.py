@@ -86,9 +86,11 @@ def base_layout(
     on_locale_change: Callable[[str], None] | None = None,
     on_new_conversation: Callable[[], None] | None = None,
     on_history_select: Callable[[str | int], None] | None = None,
+    on_history_refresh: Callable[[], Any] | None = None,
     history_items: list[dict] | None = None,
     search_history: list[str] | None = None,
     user_subtitle: str | None = None,
+    on_logo_click: Callable[[], None] | None = None,
 ) -> Iterator[None]:
     if not state.get_auth():
         ui.navigate.to("/login")
@@ -109,7 +111,9 @@ def base_layout(
         """
     )
 
-    history_items = history_items or []
+    if history_items is not None:
+        ui_state.history_items.clear()
+        ui_state.history_items.extend(history_items)
     search_history = search_history or []
 
     # Initialize locale from persistent storage so the UI reflects user's choice
@@ -122,8 +126,8 @@ def base_layout(
     resolved_user_subtitle = user_subtitle if user_subtitle is not None else _('user_subtitle', lang)
     resolved_search_placeholder = _('search_placeholder', lang)
 
-    if ui_state.selected_history_id is None and history_items:
-        ui_state.selected_history_id = history_items[0]["id"]
+    if ui_state.selected_history_id is None and ui_state.history_items:
+        ui_state.selected_history_id = ui_state.history_items[0]["id"]
 
     def handle_search(value: str) -> None:
         keyword = (value or "").strip()
@@ -154,13 +158,23 @@ def base_layout(
         ui_state.selected_history_id = history_id
 
         if on_history_select:
-            on_history_select(history_id)
+            result = on_history_select(history_id)
+            if inspect.isawaitable(result):
+                asyncio.create_task(result)
 
     def handle_new_conversation() -> None:
         if on_new_conversation:
-            on_new_conversation()
+            result = on_new_conversation()
+            if inspect.isawaitable(result):
+                asyncio.create_task(result)
         else:
             ui.navigate.to(nav('/translate', lang))
+
+    def handle_history_refresh() -> None:
+        if on_history_refresh:
+            result = on_history_refresh()
+            if inspect.isawaitable(result):
+                asyncio.create_task(result)
 
     with ui.element("div").classes("min-h-screen w-full tt-body"):
         render_background()
@@ -169,7 +183,14 @@ def base_layout(
             with ui.column().classes(
                 "w-72 shrink-0 bg-white border-r border-slate-100 p-4 gap-6"
             ):
-                with ui.row().classes("items-center gap-2"):
+                with ui.row().classes("items-center gap-2 cursor-pointer").on(
+                    "click",
+                    lambda: (
+                        on_logo_click()
+                        if on_logo_click
+                        else ui.navigate.to(nav("/", lang))
+                    ),
+                ):
                     ui.image("/images/logoitsss.png").classes(
                         "h-9 w-9 rounded-lg shadow-sm"
                     )
@@ -190,12 +211,18 @@ def base_layout(
                         on_navigate=lambda route: ui.navigate.to(nav(route, lang)),
                     )
 
-                history_list_panel(
-                    title=_('history', lang),
-                    items=history_items,
-                    selected_id=ui_state.selected_history_id,
-                    on_select=handle_history_select,
-                )
+                @ui.refreshable
+                def sidebar_history() -> None:
+                    history_list_panel(
+                        title=_('history', lang),
+                        items=ui_state.history_items,
+                        selected_id=ui_state.selected_history_id,
+                        on_select=handle_history_select,
+                        on_refresh=handle_history_refresh if on_history_refresh else None,
+                    )
+
+                sidebar_history()
+                ui_state.refresh_sidebar_history = sidebar_history.refresh
 
             with ui.column().classes("flex-1 p-6 gap-6"):
                 lang_options_dict = get_language_options(lang)
