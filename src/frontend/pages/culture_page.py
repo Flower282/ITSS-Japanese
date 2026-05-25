@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
+from urllib.parse import urlencode
+
 from nicegui import ui
 
+from src.core.i18n import _, get_user_language, nav, validate_language_or_default
+from src.frontend.api_client import api_get
 from src.frontend.components.components import (
     action_button,
     insight_list,
@@ -11,6 +16,10 @@ from src.frontend.components.components import (
     sync_action_bar,
 )
 from src.frontend.layouts.layout import base_layout
+from src.frontend.services.conversation_service import (
+    load_conversation_history,
+    load_translate_context,
+)
 from src.frontend.ui_state import UiState
 from src.core.i18n import _, get_user_language, validate_language_or_default
 from src.db.session import get_db_context
@@ -59,8 +68,8 @@ def culture_page() -> None:
                 "icon": "💬",
                 "tags": ["直接的な言い方を避ける", "提案する前に聞く"],
                 "link_label": "続きを読む",
-                "link_href": "#",
-            },
+                "link_href": nav("/analysis", lang),
+            }
         ]
         scenarios = []
         num_scenarios = max(2, len(marked_scenarios_data))
@@ -296,39 +305,38 @@ def culture_page() -> None:
                             "h-9 w-9 rounded-xl bg-white text-blue-600 "
                             "flex items-center justify-center"
                         )
-                        with icon_box:
-                            ui.icon("psychology")
-                        ui.label(_('ai_culture_assistant', lang)).classes(
-                            "text-sm font-semibold text-slate-800"
+                        action_button(
+                            label=_("view_roadmap", lang),
+                            icon="map",
+                            variant="secondary",
+                            on_click=lambda: ui.navigate.to(nav("/analysis", lang)),
+                            extra_classes="mt-4 bg-white",
                         )
                     with ui.element("div").classes("max-h-[110px] overflow-y-auto mt-2 pr-1"):
                         ui.label(ai_insight_text or _('ai_culture_insight', lang)).classes(
                             "text-sm text-slate-600"
                         )
 
-                    action_button(
-                        label=_('view_roadmap', lang),
-                        icon="map",
-                        variant="secondary",
-                        on_click=handle_roadmap,
-                        extra_classes="mt-4 bg-white",
+                    with ui.column().classes("gap-3"):
+                        ui.label(_("comm_handbook", lang)).classes(
+                            "text-sm font-semibold text-slate-700"
+                        )
+                        insight_list(
+                            items=page_state["handbook_items"], max_height="300px"
+                        )
+
+                with ui.column().classes("flex-1 gap-4"):
+                    scenario_panel(
+                        title=_("real_situation_analysis", lang),
+                        scenarios=page_state["scenarios"],
+                        max_height="520px",
+                        header_action=lambda: sync_action_bar(
+                            label=_("update_from_conv", lang),
+                            icon="sync",
+                            on_click=lambda: asyncio.create_task(handle_sync()),
+                            variant="secondary",
+                        ),
                     )
 
-                with ui.column().classes("gap-3"):
-                    ui.label(_('comm_handbook', lang)).classes(
-                        "text-sm font-semibold text-slate-700"
-                    )
-                    insight_list(items=handbook_items, max_height="300px")
-
-            with ui.column().classes("flex-1 gap-4"):
-                scenario_panel(
-                    title=_('real_situation_analysis', lang),
-                    scenarios=scenarios,
-                    max_height="520px",
-                    header_action=lambda: sync_action_bar(
-                        label=_('update_from_conv', lang),
-                        icon="sync",
-                        on_click=handle_sync,
-                        variant="secondary",
-                    ),
-                )
+    shell()
+    ui.timer(0.1, load_culture_data, once=True)

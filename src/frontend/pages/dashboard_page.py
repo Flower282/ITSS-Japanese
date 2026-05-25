@@ -2,19 +2,27 @@ from __future__ import annotations
 
 from nicegui import app, ui
 
+from src.core.i18n import _, get_user_language, nav, validate_language_or_default
 from src.frontend import state
 from src.frontend.components.components import analysis_row, stat_card
 from src.frontend.layouts.layout import base_layout
+from src.frontend.services.conversation_service import (
+    load_conversation_history,
+    load_dashboard_overview,
+)
 from src.frontend.ui_state import UiState
-from src.core.i18n import _, get_user_language, validate_language_or_default
 
 
 @ui.page("/")
 def dashboard_page() -> None:
     layout_state = UiState()
+    lang = validate_language_or_default(get_user_language())
 
-    stored_lang = get_user_language()
-    lang = validate_language_or_default(stored_lang)
+    page_state: dict = {
+        "overview": None,
+        "history_items": [],
+        "loading": True,
+    }
 
     def handle_logout() -> None:
         state.clear_auth()
@@ -29,55 +37,52 @@ def dashboard_page() -> None:
             ui.button(_('cancel', lang), on_click=logout_dialog.close).props("outline")
             ui.button(_('logout', lang), on_click=handle_logout).props("color=negative")
 
-    def handle_search(value: str) -> None:
-        if value:
-            ui.notify(f"{_('searching', lang)}: {value}", type="info")
+    async def handle_search(value: str) -> None:
+        if value.strip():
+            ui.navigate.to(nav(f"/analysis?search={value.strip()}", lang))
 
-    def handle_locale_click() -> None:
-        ui.notify(_('switched_lang', lang), type="info")
+    @ui.refreshable
+    def content() -> None:
+        overview = page_state.get("overview") or {}
+        insights = overview.get("insights") or []
 
-    with base_layout(
-        active_nav="/",
-        ui_state=layout_state,
-        top_bar_actions=[
-            {
-                "label": _('logout', lang),
-                "icon": "logout",
-                "variant": "secondary",
-                "on_click": logout_dialog.open,
-            }
-        ],
-        on_search=handle_search,
-        on_locale_click=handle_locale_click,
-    ):
         with ui.row().classes("w-full items-start justify-between gap-4"):
             with ui.column().classes("gap-1"):
-                ui.label(_('overview', lang)).classes("text-2xl font-semibold text-slate-800")
-                ui.label(_('overview_subtitle', lang)).classes("text-sm text-slate-500")
+                ui.label(_('overview', lang)).classes(
+                    "text-2xl font-semibold text-slate-800"
+                )
+                ui.label(_('overview_subtitle', lang)).classes(
+                    "text-sm text-slate-500"
+                )
             ui.button(_('lang_btn', lang), icon="language").props(
                 "outline"
             ).classes("rounded-xl text-slate-600")
+
+        if page_state["loading"]:
+            with ui.row().classes("w-full justify-center py-16"):
+                ui.spinner(size="lg")
+            return
 
         with ui.grid().classes(
             "w-full gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
         ):
             stat_card(
                 label=_('total_conversations', lang),
-                value="24",
+                value=str(overview.get("total_conversations", 0)),
                 icon="chat_bubble",
-                trend=f"+3 {_('this_week', lang)}",
+                trend=f"+{_('this_week', lang)}",
                 accent_classes="bg-blue-50 text-blue-600",
             )
             stat_card(
                 label=_('ai_accuracy', lang),
-                value="94%",
+                value=f"{overview.get('understanding_score', 0)}%",
                 icon="auto_awesome",
-                trend=f"+2% {_('this_week', lang)}",
+                trend=f"+{_('this_week', lang)}",
                 accent_classes="bg-purple-50 text-purple-600",
             )
             stat_card(
                 label=_('suggestions_to_review', lang),
-                value="3",
+                value=str(overview.get("suggestions_count", 0)),
                 icon="lightbulb",
                 trend=_('need_review', lang),
                 accent_classes="bg-amber-50 text-amber-600",
@@ -85,7 +90,7 @@ def dashboard_page() -> None:
             )
             stat_card(
                 label=_('interaction_time', lang),
-                value="12h",
+                value=str(overview.get("interaction_time", "0h")),
                 icon="schedule",
                 trend=_('this_month', lang),
                 accent_classes="bg-emerald-50 text-emerald-600",
@@ -99,30 +104,72 @@ def dashboard_page() -> None:
                 ui.label(_('ai_analysis_title', lang)).classes(
                     "text-sm font-semibold text-slate-800"
                 )
-                ui.link(_('view_full_report', lang), "#").classes("text-xs text-blue-600")
+                latest_id = overview.get("latest_analysis_id")
+                report_href = (
+                    nav(f"/analysis/{latest_id}", lang) if latest_id else nav("/analysis", lang)
+                )
+                ui.link(_('view_full_report', lang), report_href).classes(
+                    "text-xs text-blue-600"
+                )
 
             with ui.column().classes("mt-4 gap-3"):
-                analysis_row(
-                    icon="report_problem",
-                    title=_('overuse_sorry_title', lang),
-                    description=_('overuse_sorry_desc', lang),
-                    link_label=_('view_details', lang),
-                    status_label=_('confidence_down', lang),
-                    status_classes="bg-rose-50 text-rose-600",
-                )
-                analysis_row(
-                    icon="auto_fix_high",
-                    title=_('improve_keigo_title', lang),
-                    description=_('improve_keigo_desc', lang),
-                    link_label=_('view_report', lang),
-                    status_label=_('accuracy_up', lang),
-                    status_classes="bg-emerald-50 text-emerald-600",
-                )
-                analysis_row(
-                    icon="people_alt",
-                    title=_('comm_distance_title', lang),
-                    description=_('comm_distance_desc', lang),
-                    link_label=_('learn_more', lang),
-                    status_label=_('suggest_change', lang),
-                    status_classes="bg-blue-50 text-blue-600",
-                )
+                if not insights:
+                    ui.label(_('no_analysis_feedback', lang)).classes(
+                        "text-sm text-slate-500"
+                    )
+                for item in insights:
+                    analysis_row(
+                        icon=item.get("icon", "auto_awesome"),
+                        title=item.get("title", ""),
+                        description=item.get("description", ""),
+                        link_label=item.get("link_label", _('view_details', lang)),
+                        status_label=item.get("status_label", ""),
+                        status_classes=item.get(
+                            "status_classes", "bg-slate-50 text-slate-600"
+                        ),
+                        link_href=report_href,
+                    )
+
+    async def load_page_data() -> None:
+        page_state["loading"] = True
+        content.refresh()
+        try:
+            page_state["history_items"] = await load_conversation_history()
+            page_state["overview"] = await load_dashboard_overview(lang)
+        except Exception as exc:
+            ui.notify(f"{_('failed_analysis_load', lang)}: {exc}", type="negative")
+            page_state["overview"] = {
+                "total_conversations": 0,
+                "understanding_score": 0,
+                "suggestions_count": 0,
+                "interaction_time": "0h",
+                "latest_analysis_id": None,
+                "insights": [],
+            }
+        page_state["loading"] = False
+        shell.refresh()
+
+    @ui.refreshable
+    def shell() -> None:
+        with base_layout(
+            active_nav="/",
+            ui_state=layout_state,
+            history_items=page_state.get("history_items", []),
+            on_history_select=lambda cid: ui.navigate.to(
+                nav(f"/translate/{cid}", lang)
+            ),
+            top_bar_actions=[
+                {
+                    "label": _('logout', lang),
+                    "icon": "logout",
+                    "variant": "secondary",
+                    "on_click": logout_dialog.open,
+                }
+            ],
+            on_search=handle_search,
+            on_new_conversation=lambda: ui.navigate.to(nav("/translate", lang)),
+        ):
+            content()
+
+    shell()
+    ui.timer(0.1, load_page_data, once=True)

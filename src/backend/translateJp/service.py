@@ -8,11 +8,20 @@ from typing import Callable
 import numpy as np
 from scipy.io import wavfile
 
-from src.backend.translateJp.api_clients import (
-    speech_to_text,
-    translate_japanese_to_vietnamese,
-)
-from src.backend.translateJp.audio_utils import reduce_noise_file
+try:
+    from src.backend.translateJp.api_clients import (
+        speech_to_text,
+        translate_japanese_to_vietnamese,
+        translate_vietnamese_to_japanese,
+    )
+    from src.backend.translateJp.audio_utils import reduce_noise_file
+except ModuleNotFoundError:
+    from api_clients import (
+        speech_to_text,
+        translate_japanese_to_vietnamese,
+        translate_vietnamese_to_japanese,
+    )
+    from audio_utils import reduce_noise_file
 
 
 @dataclass
@@ -38,6 +47,7 @@ class VoiceTranslationService:
         self,
         frames: list[np.ndarray],
         context: str = "",
+        direction: str = "ja-to-vi",
         status_callback: Callable[[str], None] | None = None,
     ) -> VoiceTranslationResult:
         if not frames:
@@ -46,6 +56,7 @@ class VoiceTranslationService:
         return self.process_audio_file(
             self.raw_path,
             context=context,
+            direction=direction,
             status_callback=status_callback,
         )
 
@@ -58,9 +69,13 @@ class VoiceTranslationService:
         self,
         audio_path: str,
         context: str = "",
+        direction: str = "ja-to-vi",
         status_callback: Callable[[str], None] | None = None,
     ) -> VoiceTranslationResult:
         warnings: list[str] = []
+
+        if direction not in {"ja-to-vi", "vi-to-ja"}:
+            raise RuntimeError("Hướng dịch không hợp lệ.")
 
         if status_callback:
             status_callback("Đang khử nhiễu...")
@@ -71,13 +86,22 @@ class VoiceTranslationService:
         except Exception:
             warnings.append("Không thể khử nhiễu, sẽ dùng file gốc để nhận dạng.")
 
-        if status_callback:
-            status_callback("Đang chuyển giọng nói Nhật thành văn bản...")
-        transcript = speech_to_text(stt_path)
+        if direction == "ja-to-vi":
+            if status_callback:
+                status_callback("Đang chuyển giọng nói Nhật thành văn bản...")
+            transcript = speech_to_text(stt_path, language="ja")
 
-        if status_callback:
-            status_callback("Đang dịch sang tiếng Việt bằng Groq Llama...")
-        translation, warning = translate_japanese_to_vietnamese(transcript, context=context)
+            if status_callback:
+                status_callback("Đang dịch sang tiếng Việt bằng Groq Llama...")
+            translation, warning = translate_japanese_to_vietnamese(transcript, context=context)
+        else:
+            if status_callback:
+                status_callback("Đang chuyển giọng nói Việt thành văn bản...")
+            transcript = speech_to_text(stt_path, language="vi")
+
+            if status_callback:
+                status_callback("Đang dịch sang tiếng Nhật bằng Groq Llama...")
+            translation, warning = translate_vietnamese_to_japanese(transcript, context=context)
         if warning:
             warnings.append(warning)
 

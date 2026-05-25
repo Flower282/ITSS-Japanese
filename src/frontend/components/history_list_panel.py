@@ -11,6 +11,7 @@ def history_list_panel(
     items: list[dict],
     on_select: Callable[[str | int], None] | None = None,
     selected_id: str | int | None = None,
+    on_refresh: Callable[[], None] | None = None,
 ) -> ui.element:
     """Render the history list panel with selectable items."""
     container = ui.element("div").classes(
@@ -21,9 +22,15 @@ def history_list_panel(
         if title:
             with ui.row().classes("items-center justify-between mb-3"):
                 ui.label(title).classes("text-xs text-slate-400 tracking-wide")
-                ui.icon("refresh").classes("text-slate-300 text-sm")
+                refresh_btn = ui.button(icon="refresh").props(
+                    "flat round dense"
+                ).classes("text-slate-400")
+                if on_refresh:
+                    refresh_btn.on("click", on_refresh)
 
         with ui.column().classes("gap-3"):
+            if not items:
+                ui.label("Chưa có hội thoại.").classes("text-xs text-slate-400")
             for item in items:
                 is_active = item.get("id") == selected_id
                 button = ui.element("button").classes(

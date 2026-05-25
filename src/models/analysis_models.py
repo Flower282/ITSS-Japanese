@@ -19,7 +19,7 @@ class AnalysisConversation(SQLModel, table=True):
     conversation_id: Optional[int] = Field(default=None, primary_key=True)
 
     user_id: int = Field(
-        foreign_key=f"{settings.SCHEMA_NAME}.users.user_id"
+        foreign_key=f"{settings.SCHEMA_NAME}.user.id"
     )
 
     conversation_name: str
@@ -36,7 +36,7 @@ class AnalysisMessage(SQLModel, table=True):
 
     user_id: Optional[int] = Field(
         default=None,
-        foreign_key=f"{settings.SCHEMA_NAME}.users.user_id",
+        foreign_key=f"{settings.SCHEMA_NAME}.user.id",
     )
 
     conversation_id: int = Field(

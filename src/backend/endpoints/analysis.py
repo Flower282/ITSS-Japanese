@@ -11,7 +11,7 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from src.backend.endpoints.analysis_pdf import build_analysis_pdf
@@ -68,6 +68,70 @@ class AnalysisRunResponse(BaseModel):
     conversation_id: int
     inserted_logs: int
     analysis: AnalysisResponse
+
+
+class ConversationListItem(BaseModel):
+    id: int
+    label: str
+    subtitle: str | None = None
+
+
+class TranslateMessageItem(BaseModel):
+    id: int
+    role: str
+    text: str
+    time: str
+    translation: str | None = None
+    note: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class ReplySuggestionItem(BaseModel):
+    id: str
+    title: str
+    description: str
+
+
+class TranslateContextResponse(BaseModel):
+    conversation_id: int
+    conversation_name: str
+    messages: list[TranslateMessageItem]
+    intent_analysis: str
+    nuance_analysis: str
+    culture_explanation: str
+    reply_suggestions: list[ReplySuggestionItem]
+    partner_text: str
+    translation_text: str
+
+
+class MessageCreateRequest(BaseModel):
+    text: str = Field(min_length=1)
+    role: str = Field(default="you", pattern="^(listen|you)$")
+    translation: str | None = None
+    note: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class ConversationUpdateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+
+class DashboardInsightItem(BaseModel):
+    icon: str
+    title: str
+    description: str
+    link_label: str
+    status_label: str
+    status_classes: str
+
+
+class DashboardOverviewResponse(BaseModel):
+    total_conversations: int
+    understanding_score: int
+    suggestions_count: int
+    interaction_time: str
+    latest_analysis_id: int | None
+    insights: list[DashboardInsightItem]
 
 
 def parse_json_value(text: str | None) -> Any:
@@ -217,6 +281,29 @@ def get_conversation_or_404(
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     return conversation
+
+
+def get_latest_displayable_conversation(
+    session: Session,
+) -> AnalysisConversation | None:
+    conversations = session.exec(
+        select(AnalysisConversation)
+        .order_by(AnalysisConversation.created_at.desc())
+    ).all()
+
+    fallback_conversation: AnalysisConversation | None = None
+
+    for conversation in conversations:
+        if conversation.conversation_id is None:
+            continue
+
+        if fallback_conversation is None:
+            fallback_conversation = conversation
+
+        if get_messages_by_conversation(session, conversation.conversation_id):
+            return conversation
+
+    return fallback_conversation
 
 
 def get_messages_by_conversation(
@@ -1105,12 +1192,7 @@ async def ensure_latest_analysis(
     lang: str = Query(default="vn", pattern="^(vn|jp)$"),
 ) -> AnalysisResponse:
     with Session(engine) as session:
-        statement = (
-            select(AnalysisConversation)
-            .order_by(AnalysisConversation.created_at.desc())
-            .limit(1)
-        )
-        conversation = session.exec(statement).first()
+        conversation = get_latest_displayable_conversation(session)
 
         if not conversation or conversation.conversation_id is None:
             raise HTTPException(status_code=404, detail="No conversation found")
@@ -1126,12 +1208,7 @@ async def get_latest_analysis(
     lang: str = Query(default="vn", pattern="^(vn|jp)$"),
 ) -> AnalysisResponse:
     with Session(engine) as session:
-        statement = (
-            select(AnalysisConversation)
-            .order_by(AnalysisConversation.created_at.desc())
-            .limit(1)
-        )
-        conversation = session.exec(statement).first()
+        conversation = get_latest_displayable_conversation(session)
 
         if not conversation or conversation.conversation_id is None:
             raise HTTPException(status_code=404, detail="No conversation found")
@@ -1192,6 +1269,318 @@ def search_analyses(
             )
 
         return results
+
+
+def pack_message_text(
+    text: str,
+    *,
+    translation: str | None = None,
+    note: str | None = None,
+    tags: list[str] | None = None,
+) -> str:
+    payload: dict[str, Any] = {"text": text.strip()}
+    if translation:
+        payload["translation"] = translation.strip()
+    if note:
+        payload["note"] = note.strip()
+    if tags:
+        payload["tags"] = [tag for tag in tags if tag]
+    if len(payload) > 1:
+        return json.dumps(payload, ensure_ascii=False)
+    return text.strip()
+
+
+def unpack_message_text(raw: str) -> dict[str, Any]:
+    value = (raw or "").strip()
+    if value.startswith("{"):
+        try:
+            data = json.loads(value)
+            if isinstance(data, dict) and data.get("text"):
+                return {
+                    "text": str(data.get("text", "")),
+                    "translation": data.get("translation"),
+                    "note": data.get("note"),
+                    "tags": data.get("tags") or [],
+                }
+        except json.JSONDecodeError:
+            pass
+    return {"text": value, "translation": None, "note": None, "tags": []}
+
+
+def message_role(message: AnalysisMessage, index: int) -> str:
+    if message.user_id:
+        return "you"
+    return "listen" if index % 2 == 0 else "you"
+
+
+def format_message_time(created_at: datetime | None) -> str:
+    if not created_at:
+        return ""
+    return created_at.strftime("%H:%M")
+
+
+def build_reply_suggestions(logs: list[AnalysisLog]) -> list[ReplySuggestionItem]:
+    output_text = get_latest_log_text(logs, "REPLY_SUGGESTION")
+    parsed = parse_json_value(output_text)
+    suggestions: list[ReplySuggestionItem] = []
+
+    if isinstance(parsed, list):
+        for index, item in enumerate(parsed):
+            text = str(item)
+            suggestions.append(
+                ReplySuggestionItem(
+                    id=f"s{index + 1}",
+                    title=text[:80],
+                    description=text,
+                )
+            )
+    elif output_text:
+        suggestions.append(
+            ReplySuggestionItem(id="s1", title=output_text[:80], description=output_text)
+        )
+
+    return suggestions
+
+
+def build_dashboard_insights(
+    perception_gaps: list[dict[str, Any]],
+) -> list[DashboardInsightItem]:
+    icon_map = {
+        "CAO": ("report_problem", "bg-rose-50 text-rose-600"),
+        "TRUNG BÌNH": ("warning_amber", "bg-amber-50 text-amber-600"),
+        "THẤP": ("auto_fix_high", "bg-emerald-50 text-emerald-600"),
+    }
+    insights: list[DashboardInsightItem] = []
+
+    for gap in perception_gaps[:3]:
+        severity = str(gap.get("severity", "THẤP"))
+        icon, status_classes = icon_map.get(severity, icon_map["THẤP"])
+        insights.append(
+            DashboardInsightItem(
+                icon=icon,
+                title=str(gap.get("title", "Phân tích AI")),
+                description=str(
+                    gap.get("recommendation")
+                    or gap.get("left_text")
+                    or gap.get("right_text")
+                    or ""
+                ),
+                link_label="Xem chi tiết",
+                status_label=severity,
+                status_classes=status_classes,
+            )
+        )
+
+    return insights
+
+
+@router.get("/conversations", response_model=list[ConversationListItem])
+def list_conversations(
+    limit: int = Query(default=30, ge=1, le=100),
+) -> list[ConversationListItem]:
+    with Session(engine) as session:
+        conversations = session.exec(
+            select(AnalysisConversation)
+            .order_by(AnalysisConversation.created_at.desc())
+            .limit(limit)
+        ).all()
+
+        return [
+            ConversationListItem(
+                id=conversation.conversation_id,
+                label=conversation.conversation_name,
+                subtitle=conversation.created_at.strftime("%d/%m/%Y")
+                if conversation.created_at
+                else None,
+            )
+            for conversation in conversations
+            if conversation.conversation_id is not None
+        ]
+
+
+@router.post("/conversations", response_model=ConversationListItem)
+def create_conversation(
+    name: str = Query(default="Hội thoại mới"),
+) -> ConversationListItem:
+    from src.models.models import User
+
+    with Session(engine) as session:
+        user = session.exec(select(User)).first()
+        sample = session.exec(select(AnalysisConversation).limit(1)).first()
+        user_id = user.id if user else (sample.user_id if sample else 1)
+
+        conversation = AnalysisConversation(
+            user_id=user_id,
+            conversation_name=name.strip() or "Hội thoại mới",
+            created_at=datetime.utcnow(),
+        )
+        session.add(conversation)
+        session.commit()
+        session.refresh(conversation)
+
+        if conversation.conversation_id is None:
+            raise HTTPException(status_code=500, detail="Could not create conversation")
+
+        return ConversationListItem(
+            id=conversation.conversation_id,
+            label=conversation.conversation_name,
+            subtitle=conversation.created_at.strftime("%d/%m/%Y")
+            if conversation.created_at
+            else None,
+        )
+
+
+@router.patch("/conversations/{conversation_id}", response_model=ConversationListItem)
+def update_conversation(
+    conversation_id: int,
+    body: ConversationUpdateRequest,
+) -> ConversationListItem:
+    with Session(engine) as session:
+        conversation = get_conversation_or_404(session, conversation_id)
+        conversation.conversation_name = body.name.strip()
+        session.add(conversation)
+        session.commit()
+        session.refresh(conversation)
+
+        return ConversationListItem(
+            id=conversation.conversation_id,
+            label=conversation.conversation_name,
+            subtitle=conversation.created_at.strftime("%d/%m/%Y")
+            if conversation.created_at
+            else None,
+        )
+
+
+@router.get("/overview", response_model=DashboardOverviewResponse)
+async def get_dashboard_overview(
+    lang: str = Query(default="vn", pattern="^(vn|jp)$"),
+) -> DashboardOverviewResponse:
+    with Session(engine) as session:
+        conversations = session.exec(select(AnalysisConversation)).all()
+        total = len(conversations)
+
+    try:
+        analysis = await ensure_latest_analysis(lang)
+    except HTTPException:
+        return DashboardOverviewResponse(
+            total_conversations=total,
+            understanding_score=0,
+            suggestions_count=0,
+            interaction_time="0h",
+            latest_analysis_id=None,
+            insights=[],
+        )
+
+    duration = analysis.duration_minutes or 0
+    hours = duration // 60
+    minutes = duration % 60
+    interaction_time = f"{hours}h" if hours else f"{minutes}m"
+
+    return DashboardOverviewResponse(
+        total_conversations=total,
+        understanding_score=analysis.understanding_score,
+        suggestions_count=len(analysis.action_items),
+        interaction_time=interaction_time,
+        latest_analysis_id=analysis.id,
+        insights=build_dashboard_insights(analysis.perception_gaps),
+    )
+
+
+@router.get("/{conversation_id}/translate-context", response_model=TranslateContextResponse)
+async def get_translate_context(
+    conversation_id: int,
+    lang: str = Query(default="vn", pattern="^(vn|jp)$"),
+) -> TranslateContextResponse:
+    with Session(engine) as session:
+        conversation = get_conversation_or_404(session, conversation_id)
+        messages = get_messages_by_conversation(session, conversation_id)
+        logs = get_ai_logs_by_conversation(session, conversation_id)
+
+    intent = get_latest_log_text(logs, "INTENT_ANALYSIS") or ""
+    nuance = get_latest_log_text(logs, "NUANCE_ANALYSIS") or ""
+    culture = get_latest_log_text(logs, "CULTURE_EXPLANATION") or ""
+
+    if lang == "jp" and (intent or nuance or culture):
+        analysis = await ensure_analysis_exists(conversation_id)
+        localized = await localize_analysis_response(analysis, lang)
+        gaps = localized.perception_gaps
+        if gaps:
+            culture = str(gaps[0].get("recommendation", culture)) if gaps else culture
+
+    ui_messages = []
+    for index, message in enumerate(messages):
+        unpacked = unpack_message_text(message.text)
+        ui_messages.append(
+            TranslateMessageItem(
+                id=message.message_id or index,
+                role=message_role(message, index),
+                text=unpacked["text"],
+                translation=unpacked.get("translation"),
+                note=unpacked.get("note"),
+                tags=unpacked.get("tags") or [],
+                time=format_message_time(message.created_at),
+            )
+        )
+
+    listen_items = [item for item in ui_messages if item.role == "listen"]
+    last_listen = listen_items[-1] if listen_items else None
+    partner_text = last_listen.text if last_listen else ""
+    translation_text = (
+        (last_listen.translation or "") if last_listen else ""
+    ) or nuance or intent or ""
+
+    return TranslateContextResponse(
+        conversation_id=conversation_id,
+        conversation_name=conversation.conversation_name,
+        messages=ui_messages,
+        intent_analysis=intent,
+        nuance_analysis=nuance,
+        culture_explanation=culture,
+        reply_suggestions=build_reply_suggestions(logs),
+        partner_text=partner_text,
+        translation_text=translation_text,
+    )
+
+
+@router.post("/{conversation_id}/messages", response_model=TranslateMessageItem)
+def add_conversation_message(
+    conversation_id: int,
+    body: MessageCreateRequest,
+) -> TranslateMessageItem:
+    with Session(engine) as session:
+        get_conversation_or_404(session, conversation_id)
+        user_id = 1 if body.role == "you" else None
+
+        stored_text = pack_message_text(
+            body.text,
+            translation=body.translation,
+            note=body.note,
+            tags=body.tags,
+        )
+        message = AnalysisMessage(
+            conversation_id=conversation_id,
+            user_id=user_id,
+            text=stored_text,
+            created_at=datetime.utcnow(),
+        )
+        session.add(message)
+        session.commit()
+        session.refresh(message)
+
+        if message.message_id is None:
+            raise HTTPException(status_code=500, detail="Could not save message")
+
+        unpacked = unpack_message_text(message.text)
+
+        return TranslateMessageItem(
+            id=message.message_id,
+            role=body.role,
+            text=unpacked["text"],
+            translation=unpacked.get("translation"),
+            note=unpacked.get("note"),
+            tags=unpacked.get("tags") or [],
+            time=format_message_time(message.created_at),
+        )
 
 
 @router.get("/{conversation_id}/ensure", response_model=AnalysisResponse)
@@ -1290,12 +1679,7 @@ async def export_latest_analysis_pdf(
     lang: str = Query(default="vn", pattern="^(vn|jp)$"),
 ) -> FileResponse:
     with Session(engine) as session:
-        statement = (
-            select(AnalysisConversation)
-            .order_by(AnalysisConversation.created_at.desc())
-            .limit(1)
-        )
-        conversation = session.exec(statement).first()
+        conversation = get_latest_displayable_conversation(session)
 
         if not conversation or conversation.conversation_id is None:
             raise HTTPException(status_code=404, detail="No conversation found")

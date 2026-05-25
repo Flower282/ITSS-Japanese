@@ -4,12 +4,24 @@ import os
 import tempfile
 
 from fastapi import APIRouter, File, Form, UploadFile
+from pydantic import BaseModel, Field
 
+from src.backend.translateJp.api_clients import (
+    translate_japanese_to_vietnamese,
+    translate_vietnamese_to_japanese,
+)
 from src.backend.translateJp.service import VoiceTranslationService
 
 router = APIRouter()
 
 
+class TranslateTextRequest(BaseModel):
+    text: str = Field(min_length=1)
+    context: str = ""
+    direction: str = Field(default="ja-to-vi", pattern="^(ja-to-vi|vi-to-ja)$")
+
+
+@router.post("/audio")
 @router.post("/translate-audio")
 async def translate_audio(
     audio: UploadFile = File(...),
@@ -34,3 +46,22 @@ async def translate_audio(
             os.remove(tmp_path)
         except OSError:
             pass
+
+
+@router.post("")
+@router.post("/translate-text")
+async def translate_text(body: TranslateTextRequest) -> dict:
+    """Translate text between Japanese and Vietnamese without audio."""
+    if body.direction == "ja-to-vi":
+        translation, warning = translate_japanese_to_vietnamese(
+            body.text, context=body.context
+        )
+    else:
+        translation, warning = translate_vietnamese_to_japanese(
+            body.text, context=body.context
+        )
+    return {
+        "transcript": body.text,
+        "translation": translation,
+        "warning": warning,
+    }

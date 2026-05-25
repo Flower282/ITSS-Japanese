@@ -32,8 +32,10 @@ def recommendation_chips(
         else:
             selected_set.add(option)
         set_state(option, option in selected_set)
+        selected.clear()
+        selected.extend(sorted(selected_set))
         if on_change:
-            on_change(sorted(selected_set))
+            on_change(list(selected))
 
     with ui.row().classes("flex-wrap gap-2") as root:
         for option in options:
