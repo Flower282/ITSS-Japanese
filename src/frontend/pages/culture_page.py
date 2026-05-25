@@ -40,6 +40,7 @@ def culture_page() -> None:
             {
                 "title": "敬語（けいご）",
                 "description": "年上や上司への敬意を示す階層的な言語システム。",
+                "icon": "🙇",
                 "tags": [
                     "です・ます（基本的な丁寧さ）",
                     "尊敬語（相手を高める）",
@@ -51,6 +52,7 @@ def culture_page() -> None:
             {
                 "title": "返答スタイル",
                 "description": "ビジネスのやり取りで返答のペースを尊重し、面目を保つ。",
+                "icon": "💬",
                 "tags": ["直接的な言い方を避ける", "提案する前に聞く"],
                 "link_label": "続きを読む",
                 "link_href": "#",
@@ -117,6 +119,7 @@ def culture_page() -> None:
             {
                 "title": "Kính ngữ (Keigo)",
                 "description": "Hệ thống ngôn ngữ phân cấp, thể hiện sự tôn trọng với người lớn tuổi, cấp trên.",
+                "icon": "🙇",
                 "tags": [
                     "てす・ます (Lịch sự cơ bản)",
                     "尊敬語 (Tôn kính ngữ)",
@@ -128,6 +131,7 @@ def culture_page() -> None:
             {
                 "title": "Phong cách phản hồi",
                 "description": "Tôn trọng nhịp độ phản hồi và giữ thể diện trong trao đổi công việc.",
+                "icon": "💬",
                 "tags": ["Tránh nói thẳng", "Lắng nghe trước khi góp ý"],
                 "link_label": "Đọc tiếp",
                 "link_href": "#",
