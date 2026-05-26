@@ -46,7 +46,7 @@ class AnalysisMessage(SQLModel, table=True):
     text: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     is_deleted: bool = False
-    is_marked: int = Field(default=0)
+    is_marked: Optional[int] = Field(default=0)
 
 
 class AnalysisLog(SQLModel, table=True):
@@ -66,4 +66,14 @@ class AnalysisLog(SQLModel, table=True):
 
     ai_task_type: str
     output_text: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class LearningRoute(SQLModel, table=True):
+    __tablename__ = "learning_route"
+    __table_args__ = TABLE_ARGS
+
+    learning_route_id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int
+    route_text: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=datetime.utcnow)

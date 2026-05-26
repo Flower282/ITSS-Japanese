@@ -16,31 +16,43 @@ def insight_list(*, items: list[dict], max_height: str | None = None) -> ui.elem
 
         with content:
             for item in items:
-                with ui.row().classes("items-start gap-3"):
+                with ui.row().classes("items-start gap-3 w-full flex-nowrap mb-2"):
                     icon_box = ui.element("div").classes(
-                        "h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 "
-                        "flex items-center justify-center"
+                        "h-12 w-12 rounded-2xl bg-emerald-50 "
+                        "flex items-center justify-center flex-shrink-0"
                     )
                     with icon_box:
-                        ui.icon(item.get("icon", "menu_book"))
+                        icon = item.get("icon", "menu_book")
+                        # If it is an emoji, render as label, else render as ui.icon
+                        if len(icon) == 1 or icon in ["🙇", "💬"]:
+                            ui.label(icon).classes("text-2xl")
+                        else:
+                            ui.icon(icon).classes("text-xl text-emerald-600")
 
-                    with ui.column().classes("gap-1"):
+                    with ui.column().classes("gap-2 flex-1"):
                         ui.label(item.get("title", "")).classes(
-                            "text-sm font-semibold text-slate-800"
+                            "text-sm font-bold text-slate-800"
                         )
                         ui.label(item.get("description", "")).classes(
-                            "text-xs text-slate-500"
+                            "text-xs text-slate-500 leading-relaxed"
                         )
-                        for tag in item.get("tags", []):
-                            with ui.row().classes("items-center gap-2"):
-                                ui.icon("check_circle").classes(
-                                    "text-[10px] text-emerald-500"
-                                )
-                                ui.label(tag).classes("text-xs text-slate-500")
+                        
+                        # Render tags list
+                        if item.get("tags"):
+                            with ui.column().classes("w-full gap-2 mt-1"):
+                                for tag in item.get("tags", []):
+                                    with ui.row().classes(
+                                        "items-center gap-2 rounded-xl bg-slate-50 border border-slate-100/60 px-3 py-2 w-full"
+                                    ):
+                                        ui.icon("assignment").classes(
+                                            "text-xs text-slate-400"
+                                        )
+                                        ui.label(tag).classes("text-xs text-slate-600 font-medium")
+
                         link_label = item.get("link_label")
                         if link_label:
                             ui.link(link_label, item.get("link_href", "#")).classes(
-                                "text-xs text-blue-600"
+                                "text-xs text-blue-600 hover:text-blue-800 transition-colors font-medium mt-1"
                             )
 
     return container

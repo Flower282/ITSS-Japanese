@@ -10,3 +10,14 @@ psql "postgresql://username:password@host:port/defaultdb?sslmode=require"
 
 bản thân server aivien đã có hỗ trợ UTF8 rồi nên về cơ bản lưu được nihongo và tiêgns việt có dấu
 cái cần set lại là client (psql) trên máy từ win123 j đó sang UTF8 là được nhé, lúc ý insert data không bị lỗi
+
+---------
+VÌ dự án dùng SQLAlchemy không còn hỗ trợ alias postgres nữa,mà bắt buộc phải dùng:
+
+postgresql://...
+
+=> trong fil .env sửa dtb_url thành postgresql là chạy python app.py được
+
+
+--------------
+Kết nối dtb với local : (cmd thì dùng " ")

@@ -3,4 +3,5 @@ from src.models.analysis_models import (
     AnalysisConversation,
     AnalysisMessage,
     AnalysisLog,
+    LearningRoute,
 )
