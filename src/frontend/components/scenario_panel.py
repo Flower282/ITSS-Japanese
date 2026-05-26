@@ -58,20 +58,20 @@ def scenario_panel(
                 with ui.element("div").classes(
                     f"rounded-2xl border p-4 {accent_classes}"
                 ):
-                    with ui.row().classes("items-start gap-3"):
+                    with ui.row().classes("items-start gap-3 w-full flex-nowrap"):
                         badge = ui.element("div").classes(
                             "h-7 w-7 rounded-full bg-white text-slate-600 "
-                            "flex items-center justify-center text-xs font-semibold"
+                            "flex items-center justify-center text-xs font-semibold flex-shrink-0"
                         )
                         with badge:
                             ui.label(str(scenario.get("index", "")))
 
-                        with ui.column().classes("gap-1"):
+                        with ui.column().classes("gap-1 flex-1 min-w-0"):
                             ui.label(scenario.get("category", "")).classes(
                                 "text-[11px] uppercase tracking-wide text-slate-500"
                             )
                             ui.label(scenario.get("phrase", "")).classes(
-                                "text-sm font-semibold text-slate-800"
+                                "text-sm font-semibold text-slate-800 break-words"
                             )
 
                     with ui.row().classes("gap-3 mt-3"):
