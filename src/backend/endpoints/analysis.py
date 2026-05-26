@@ -16,6 +16,7 @@ from sqlmodel import Session, select
 
 from src.backend.endpoints.analysis_pdf import build_analysis_pdf
 from src.db.session import engine
+from src.repositories.message_repo import message_repo
 from src.models.analysis_models import (
     AnalysisConversation,
     AnalysisLog,
@@ -84,6 +85,12 @@ class TranslateMessageItem(BaseModel):
     translation: str | None = None
     note: str | None = None
     tags: list[str] = Field(default_factory=list)
+    is_marked: int = 0
+
+
+class MarkMessageResponse(BaseModel):
+    id: int
+    is_marked: int
 
 
 class ReplySuggestionItem(BaseModel):
@@ -1519,6 +1526,7 @@ async def get_translate_context(
                 note=unpacked.get("note"),
                 tags=unpacked.get("tags") or [],
                 time=format_message_time(message.created_at),
+                is_marked=int(message.is_marked or 0),
             )
         )
 
@@ -1580,7 +1588,21 @@ def add_conversation_message(
             note=unpacked.get("note"),
             tags=unpacked.get("tags") or [],
             time=format_message_time(message.created_at),
+            is_marked=int(message.is_marked or 0),
         )
+
+
+@router.patch("/messages/{message_id}/mark", response_model=MarkMessageResponse)
+def mark_conversation_message(message_id: int) -> MarkMessageResponse:
+    """Marks a message as important (is_marked=1)."""
+    with Session(engine) as session:
+        message = message_repo.mark_message(session, message_id=message_id)
+    if message.message_id is None:
+        raise HTTPException(status_code=500, detail="Could not mark message")
+    return MarkMessageResponse(
+        id=message.message_id,
+        is_marked=int(message.is_marked or 0),
+    )
 
 
 @router.get("/{conversation_id}/ensure", response_model=AnalysisResponse)

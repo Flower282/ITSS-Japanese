@@ -46,6 +46,7 @@ class AnalysisMessage(SQLModel, table=True):
     text: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     is_deleted: bool = False
+    is_marked: int = Field(default=0)
 
 
 class AnalysisLog(SQLModel, table=True):

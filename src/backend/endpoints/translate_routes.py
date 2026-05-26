@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import tempfile
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from src.backend.translateJp.api_clients import (
@@ -41,6 +41,8 @@ async def translate_audio(
             "translation": result.translation,
             "warning": result.warning,
         }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
         try:
             os.remove(tmp_path)
@@ -52,14 +54,17 @@ async def translate_audio(
 @router.post("/translate-text")
 async def translate_text(body: TranslateTextRequest) -> dict:
     """Translate text between Japanese and Vietnamese without audio."""
-    if body.direction == "ja-to-vi":
-        translation, warning = translate_japanese_to_vietnamese(
-            body.text, context=body.context
-        )
-    else:
-        translation, warning = translate_vietnamese_to_japanese(
-            body.text, context=body.context
-        )
+    try:
+        if body.direction == "ja-to-vi":
+            translation, warning = translate_japanese_to_vietnamese(
+                body.text, context=body.context
+            )
+        else:
+            translation, warning = translate_vietnamese_to_japanese(
+                body.text, context=body.context
+            )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {
         "transcript": body.text,
         "translation": translation,

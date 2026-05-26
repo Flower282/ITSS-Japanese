@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from pathlib import Path
 
 import requests
@@ -9,10 +10,59 @@ GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 GOOGLE_TRANSLATE_URL = "https://translate.googleapis.com/translate_a/single"
 
 
+def _groq_api_key() -> str:
+    raw = os.getenv("GROQ_API_KEY", "").strip()
+    if not raw or raw.startswith("<"):
+        try:
+            from src.core.config import settings
+
+            raw = (settings.GROQ_API_KEY or "").strip()
+        except Exception:
+            pass
+    if not raw or raw.startswith("<") or "your_groq" in raw.lower():
+        return ""
+    return raw
+
+
+def _use_google_fallback() -> bool:
+    """Google Translate only when Groq API key is not configured."""
+    return not _groq_api_key()
+
+
+_JP_SCRIPT_RE = re.compile(r"[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\u3400-\u4dbf]")
+_LATIN_RE = re.compile(r"[A-Za-z]")
+
+
+def _clean_translation_output(text: str) -> str:
+    cleaned = (text or "").strip()
+    if cleaned.startswith(("\"", "'", "「")) and cleaned.endswith(("\"", "'", "」")):
+        cleaned = cleaned[1:-1].strip()
+    return cleaned
+
+
+def _is_mostly_romaji(text: str) -> bool:
+    """True when output has Latin letters but almost no Japanese script."""
+    if not text or not _LATIN_RE.search(text):
+        return False
+    return _JP_SCRIPT_RE.search(text) is None
+
+
+_VI_TO_JA_SYSTEM_PROMPT = (
+    "Bạn là dịch giả tiếng Việt sang tiếng Nhật cho hội thoại thực tế. "
+    "Dịch tự nhiên, đúng nghĩa, giữ ngữ cảnh và giọng điệu. "
+    "BẮT BUỘC chỉ dùng chữ Nhật: hiragana (ひらがな), katakana (カタカナ), kanji (漢字). "
+    "CẤM romaji, cấm chữ Latin, cấm giải thích. "
+    "Ví dụ đúng: こんにちは。Ví dụ sai: Konnichiwa. "
+    "Chỉ trả về một câu/cụm tiếng Nhật duy nhất."
+)
+
+
 def speech_to_text(audio_file_path: str, language: str = "ja") -> str:
-    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    api_key = _groq_api_key()
     if not api_key:
-        raise RuntimeError("Thiếu GROQ_API_KEY trong biến môi trường")
+        raise RuntimeError(
+            "Ghi âm cần GROQ_API_KEY (Whisper). Thêm key Groq vào .env hoặc dùng dịch văn bản."
+        )
 
     headers = {"Authorization": f"Bearer {api_key}"}
 
@@ -106,9 +156,10 @@ def translate_japanese_to_vietnamese(text: str, context: str = "") -> tuple[str,
     if not text or not text.strip():
         raise RuntimeError("Không có văn bản để dịch")
 
-    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    api_key = _groq_api_key()
     if not api_key:
-        raise RuntimeError("Thiếu GROQ_API_KEY trong biến môi trường")
+        translated_text = _translate_with_google(text.strip(), "ja", "vi")
+        return translated_text, "Không có GROQ_API_KEY. Đã dùng Google Translate."
 
     model = os.getenv("GROQ_TRANSLATION_MODEL", "llama-3.1-8b-instant").strip()
     system_prompt = (
@@ -140,16 +191,14 @@ def translate_japanese_to_vietnamese(text: str, context: str = "") -> tuple[str,
         response.raise_for_status()
     except requests.HTTPError as exc:
         fallback_reason = _groq_error_message(response)
-        if response.status_code in (401, 403, 429) or response.status_code == 400:
+        if _use_google_fallback() and response.status_code in (401, 403, 429, 400):
             try:
                 translated_text = _translate_with_google(text.strip(), "ja", "vi")
             except Exception as google_exc:
                 raise RuntimeError(
                     f"{fallback_reason} Không thể fallback sang Google Translate: {google_exc}"
                 ) from exc
-
-            warning = f"{fallback_reason} Đã fallback sang Google Translate."
-            return translated_text, warning
+            return translated_text, f"{fallback_reason} Đã fallback sang Google Translate."
 
         raise RuntimeError(fallback_reason) from exc
 
@@ -166,66 +215,96 @@ def translate_japanese_to_vietnamese(text: str, context: str = "") -> tuple[str,
     return translated_text, None
 
 
-def translate_vietnamese_to_japanese(text: str, context: str = "") -> tuple[str, str | None]:
-    if not text or not text.strip():
-        raise RuntimeError("Không có văn bản để dịch")
-
-    api_key = os.getenv("GROQ_API_KEY", "").strip()
-    if not api_key:
-        raise RuntimeError("Thiếu GROQ_API_KEY trong biến môi trường")
-
-    model = os.getenv("GROQ_TRANSLATION_MODEL", "llama-3.1-8b-instant").strip()
-    system_prompt = (
-        "Bạn là một dịch giả tiếng Việt sang tiếng Nhật. "
-        "Hãy dịch tự nhiên, đúng nghĩa, giữ ngữ cảnh, chọn nghĩa phù hợp theo câu và bối cảnh. "
-        "Chỉ trả về bản dịch tiếng Nhật, không giải thích thêm."
-    )
-
-    user_prompt = f"Câu tiếng Việt cần dịch:\n{text.strip()}"
-    if context and context.strip():
-        user_prompt += f"\n\nNgữ cảnh bổ sung từ người dùng:\n{context.strip()}"
-
+def _groq_chat_translate(
+    *,
+    api_key: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    temperature: float = 0.2,
+) -> str:
     payload = {
         "model": model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "temperature": 0.2,
+        "temperature": temperature,
     }
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-
     response = requests.post(GROQ_CHAT_URL, headers=headers, json=payload, timeout=120)
-
-    try:
-        response.raise_for_status()
-    except requests.HTTPError as exc:
-        fallback_reason = _groq_error_message(response)
-        if response.status_code in (401, 403, 429) or response.status_code == 400:
-            try:
-                translated_text = _translate_with_google(text.strip(), "vi", "ja")
-            except Exception as google_exc:
-                raise RuntimeError(
-                    f"{fallback_reason} Không thể fallback sang Google Translate: {google_exc}"
-                ) from exc
-
-            warning = f"{fallback_reason} Đã fallback sang Google Translate."
-            return translated_text, warning
-
-        raise RuntimeError(fallback_reason) from exc
-
+    response.raise_for_status()
     response_payload = response.json()
     choices = response_payload.get("choices", [])
     if not choices:
         raise RuntimeError(f"Groq không trả về kết quả dịch hợp lệ: {response_payload}")
-
     message = choices[0].get("message", {})
-    translated_text = (message.get("content") or "").strip()
+    translated_text = _clean_translation_output(message.get("content") or "")
     if not translated_text:
         raise RuntimeError(f"Groq không trả về nội dung dịch: {response_payload}")
+    return translated_text
+
+
+def translate_vietnamese_to_japanese(text: str, context: str = "") -> tuple[str, str | None]:
+    if not text or not text.strip():
+        raise RuntimeError("Không có văn bản để dịch")
+
+    api_key = _groq_api_key()
+    if not api_key:
+        translated_text = _clean_translation_output(
+            _translate_with_google(text.strip(), "vi", "ja")
+        )
+        return translated_text, "Không có GROQ_API_KEY. Đã dùng Google Translate."
+
+    model = os.getenv("GROQ_TRANSLATION_MODEL", "llama-3.1-8b-instant").strip()
+    user_prompt = f"Câu tiếng Việt cần dịch:\n{text.strip()}"
+    if context and context.strip():
+        user_prompt += f"\n\nNgữ cảnh bổ sung từ người dùng:\n{context.strip()}"
+
+    try:
+        translated_text = _groq_chat_translate(
+            api_key=api_key,
+            model=model,
+            system_prompt=_VI_TO_JA_SYSTEM_PROMPT,
+            user_prompt=user_prompt,
+        )
+        if _is_mostly_romaji(translated_text):
+            retry_prompt = (
+                f"{user_prompt}\n\n"
+                "Nhắc lại: chỉ trả về tiếng Nhật bằng hiragana/katakana/kanji, "
+                "không dùng romaji."
+            )
+            translated_text = _groq_chat_translate(
+                api_key=api_key,
+                model=model,
+                system_prompt=_VI_TO_JA_SYSTEM_PROMPT,
+                user_prompt=retry_prompt,
+                temperature=0.1,
+            )
+        if _is_mostly_romaji(translated_text):
+            translated_text = _clean_translation_output(
+                _translate_with_google(text.strip(), "vi", "ja")
+            )
+            return (
+                translated_text,
+                "Groq trả về romaji; đã dùng Google Translate để có chữ Nhật.",
+            )
+    except requests.HTTPError as exc:
+        fallback_reason = _groq_error_message(exc.response)
+        if _use_google_fallback() and exc.response.status_code in (401, 403, 429, 400):
+            try:
+                translated_text = _clean_translation_output(
+                    _translate_with_google(text.strip(), "vi", "ja")
+                )
+            except Exception as google_exc:
+                raise RuntimeError(
+                    f"{fallback_reason} Không thể fallback sang Google Translate: {google_exc}"
+                ) from exc
+            return translated_text, f"{fallback_reason} Đã fallback sang Google Translate."
+        raise RuntimeError(fallback_reason) from exc
 
     return translated_text, None
 
