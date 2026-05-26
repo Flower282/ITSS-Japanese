@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 from nicegui import ui
 
 
@@ -8,6 +11,7 @@ def conversation_history_view(
     title: str,
     messages: list[dict],
     max_height: str | None = None,
+    on_mark: Callable[[int], Any] | None = None,
 ) -> ui.element:
     """Scrollable chat history with optional translation and insight blocks."""
     container = ui.element("div").classes(
@@ -41,7 +45,27 @@ def conversation_history_view(
                         "text-slate-500 w-full"
                     ):
                         ui.label(message.get("label", ""))
-                        ui.label(message.get("time", ""))
+                        with ui.row().classes("items-center gap-2"):
+                            if is_listen and message.get("id") and on_mark:
+                                marked = int(message.get("is_marked") or 0) == 1
+                                mark_btn = ui.button(
+                                    "Đã đánh dấu" if marked else "Đánh dấu"
+                                ).props("flat dense no-caps").classes(
+                                    "normal-case text-[11px] px-2 py-0 min-h-0 "
+                                    "text-amber-800"
+                                )
+                                if marked:
+                                    mark_btn.props("disable")
+                                else:
+                                    msg_id = int(message["id"])
+
+                                    async def on_mark_click(
+                                        mid: int = msg_id,
+                                    ) -> None:
+                                        await on_mark(mid)
+
+                                    mark_btn.on("click", on_mark_click)
+                            ui.label(message.get("time", ""))
 
                     ui.label(message.get("text", "")).classes(
                         "text-sm text-slate-800 mt-1 whitespace-pre-wrap"

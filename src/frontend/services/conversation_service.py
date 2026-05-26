@@ -60,6 +60,10 @@ async def create_conversation(name: str = "Hội thoại mới") -> dict[str, An
     return response.json()
 
 
+async def mark_message(message_id: int) -> dict[str, Any]:
+    return await api_patch_json(f"/api/analysis/messages/{message_id}/mark", {})
+
+
 async def add_message(
     conversation_id: int,
     text: str,

@@ -21,6 +21,7 @@ from src.frontend.services.conversation_service import (
     create_conversation,
     load_conversation_history,
     load_translate_context,
+    mark_message,
     rename_conversation,
     run_analysis,
     search_conversations,
@@ -41,6 +42,7 @@ def _message_from_api(m: dict[str, Any], lang: str) -> dict[str, Any]:
         "translation": m.get("translation"),
         "note": m.get("note"),
         "tags": m.get("tags") or [],
+        "is_marked": int(m.get("is_marked") or 0),
     }
 
 
@@ -152,6 +154,19 @@ def translation_page(conversation_id: int | None = None) -> None:
                 if desc and desc != title:
                     ui.label(desc).classes("text-xs text-slate-500 -mt-1 mb-2")
 
+    async def handle_mark_message(message_id: int) -> None:
+        try:
+            result = await mark_message(message_id)
+            marked_id = int(result.get("id", message_id))
+            for item in state["messages"]:
+                if item.get("id") == marked_id:
+                    item["is_marked"] = int(result.get("is_marked", 1))
+                    break
+            render_history()
+            toast("Đã đánh dấu tin nhắn", type="positive")
+        except Exception as exc:
+            toast(str(exc), type="negative")
+
     def render_history() -> None:
         container = refs.get("history_container")
         if not container:
@@ -163,6 +178,7 @@ def translation_page(conversation_id: int | None = None) -> None:
                 title=_("conv_history_title", lang),
                 messages=state["messages"],
                 max_height="560px",
+                on_mark=handle_mark_message,
             )
 
     async def ensure_conversation_id() -> int | None:
@@ -385,6 +401,9 @@ def translation_page(conversation_id: int | None = None) -> None:
             update_panel_labels()
             with client:
                 inp.value = ""
+            warning = result.get("warning")
+            if warning:
+                toast(str(warning), type="warning")
             toast(_("added_to_history", lang), type="positive")
         except Exception as exc:
             toast(f"Dịch thất bại: {exc}", type="negative")
