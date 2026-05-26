@@ -34,7 +34,7 @@ def side_nav_menu(
                 button = ui.element("button").classes(
                     "w-full flex items-center gap-3 rounded-xl px-3 py-2 "
                     "text-sm text-slate-600 hover:bg-blue-50"
-                )
+                )        
                 if action.get("on_click"):
                     button.on("click", lambda a=action: a["on_click"]())
                 with button:
