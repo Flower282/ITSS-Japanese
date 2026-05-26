@@ -28,7 +28,30 @@ def history_list_panel(
                 if on_refresh:
                     refresh_btn.on("click", on_refresh)
 
-        with ui.column().classes("gap-3"):
+        ui.add_head_html(
+            """
+            <style>
+                .history-scrollbar {
+                    scrollbar-width: thin;
+                    scrollbar-color: #cbd5e1 transparent;
+                }
+                .history-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .history-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .history-scrollbar::-webkit-scrollbar-thumb {
+                    background: #cbd5e1;
+                    border-radius: 4px;
+                }
+                .history-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #94a3b8;
+                }
+            </style>
+            """
+        )
+        with ui.column().classes("w-full gap-3 overflow-y-auto history-scrollbar pr-1").style("max-height: 320px;"):
             if not items:
                 ui.label("Chưa có hội thoại.").classes("text-xs text-slate-400")
             for item in items:

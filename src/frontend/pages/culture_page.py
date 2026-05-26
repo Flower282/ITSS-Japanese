@@ -19,7 +19,7 @@ from src.frontend.layouts.layout import base_layout
 from src.frontend.services.conversation_service import (
     load_conversation_history,
     load_translate_context,
-)
+)   
 from src.frontend.ui_state import UiState
 from src.db.session import get_db_context
 from src.repositories.cultural_assistant_repo import (
@@ -368,7 +368,7 @@ def culture_page() -> None:
                         header_action=lambda: sync_action_bar(
                             label=_("update_from_conv", lang),
                             icon="sync",
-                            on_click=lambda: asyncio.create_task(handle_sync()),
+                            on_click=handle_sync,
                             variant="secondary",
                         ),
                     )

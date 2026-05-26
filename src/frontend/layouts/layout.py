@@ -181,7 +181,7 @@ def base_layout(
 
         with ui.row().classes("w-full min-h-screen"):
             with ui.column().classes(
-                "w-72 shrink-0 bg-white border-r border-slate-100 p-4 gap-6"
+                "w-72 shrink-0 bg-white border-r border-slate-100 p-4 gap-6 rounded-r-3xl shadow-md"
             ):
                 with ui.row().classes("items-center gap-2 cursor-pointer").on(
                     "click",
@@ -195,6 +195,8 @@ def base_layout(
                         "h-9 w-9 rounded-lg shadow-sm"
                     )
                     ui.label("TrueTalk").classes("text-lg font-semibold text-blue-700")
+
+                ui.element("div").classes("w-full h-[2.5px] bg-cyan-500 -mt-2")
 
                 action_button(
                     label=_('new_conversation', lang),
