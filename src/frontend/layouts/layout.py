@@ -196,7 +196,7 @@ def base_layout(
                     )
                     ui.label("TrueTalk").classes("text-lg font-semibold text-blue-700")
 
-                ui.element("div").classes("w-full h-[2.5px] bg-cyan-500 -mt-2")
+                ui.element("div").classes("w-full h-[2.5px] bg-gray-200 -mt-2")
 
                 action_button(
                     label=_('new_conversation', lang),
