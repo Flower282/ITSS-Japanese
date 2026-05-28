@@ -301,7 +301,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         'real_meaning': '実際の意味とニュアンス',
         'suggested_replies_title': '返答の提案（クリックして使用）',
         'what_you_want_say': '何を言いたいですか？',
-        'input_placeholder': 'ベトナム語で言いたいことを入力してください...',
+        'input_placeholder': '日本語で言いたいことを入力してください...',
         'optimize_tone': 'トーンの最適化',
         'tone_polite': '丁寧',
         'tone_shorter': 'より簡潔に',

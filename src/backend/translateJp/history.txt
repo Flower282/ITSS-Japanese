@@ -1,3 +1,6 @@
-Người Nhật (Tanaka): 今週の金曜日、仕事が終わったら一緒に飲みに行きませんか？ (Thứ sáu tuần này, sau khi xong việc cậu có muốn đi uống cùng không?)
-Người Việt (Bạn): Dạ, em rất muốn đi ạ. Mấy giờ thì được ạ?
-Người Nhật (Tanaka): 19時ごろはどうですか？新宿駅で待ち合わせしましょう。 (Khoảng 19h thì sao? Chúng ta hẹn gặp ở ga Shinjuku nhé.)
+{"text": "はじめまして、みなさん。私は勝です。ヤクザです。", "translation": "xin chào các bạn, tôi tên Thắng, là Yakuza", "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự", "tags": ["Lịch sự"]}
+{"text": "こんにちは。私はドーソン・クイーと申します。よろしくお願いします。", "translation": "Xin chào. Tôi là Dōson Kuī, vui lòng được biết đến."}
+{"text": "ベトナム側は再確認してください", "translation": "Phía Việt Nam nên hỏi lại để xác nhận danh tính của Thắng", "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự", "tags": ["Lịch sự"]}
+{"text": "おまけな", "translation": "Bản dịch tiếng Việt:\nMột món quà kèm theo"}
+{"text": "こんにちは", "translation": "Xin chào."}
+{"text": "こんにちは、私はタムです。", "translation": "Xin chào, tôi là Tâm."}

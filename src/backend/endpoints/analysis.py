@@ -6,6 +6,7 @@ import re
 import unicodedata
 from datetime import datetime
 from difflib import SequenceMatcher
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -15,6 +16,10 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from src.backend.endpoints.analysis_pdf import build_analysis_pdf
+from src.backend.translateJp.analize_suggest import (
+    HISTORY_FILE as SUGGEST_HISTORY_FILE,
+    analyze_and_suggest_chat,
+)
 from src.db.session import engine
 from src.repositories.message_repo import message_repo
 from src.models.analysis_models import (
@@ -1285,15 +1290,8 @@ def pack_message_text(
     note: str | None = None,
     tags: list[str] | None = None,
 ) -> str:
-    payload: dict[str, Any] = {"text": text.strip()}
-    if translation:
-        payload["translation"] = translation.strip()
-    if note:
-        payload["note"] = note.strip()
-    if tags:
-        payload["tags"] = [tag for tag in tags if tag]
-    if len(payload) > 1:
-        return json.dumps(payload, ensure_ascii=False)
+    # Keep DB message text plain for readability and compatibility.
+    # Extra metadata is returned in API response and UI state.
     return text.strip()
 
 
@@ -1347,6 +1345,45 @@ def build_reply_suggestions(logs: list[AnalysisLog]) -> list[ReplySuggestionItem
         )
 
     return suggestions
+
+
+def build_reply_suggestions_from_messages(
+    messages: list[AnalysisMessage],
+) -> list[ReplySuggestionItem]:
+    transcript = "\n".join((message.text or "").strip() for message in messages if message.text)
+    if not transcript.strip():
+        return []
+    try:
+        history_path = Path(SUGGEST_HISTORY_FILE)
+        history_path.parent.mkdir(parents=True, exist_ok=True)
+        history_path.write_text(transcript, encoding="utf-8")
+        analyzed = analyze_and_suggest_chat(history_path)
+    except Exception:
+        return []
+
+    suggestions = analyzed.get("suggestions")
+    if not isinstance(suggestions, list):
+        return []
+
+    items: list[ReplySuggestionItem] = []
+    for index, item in enumerate(suggestions):
+        if not isinstance(item, dict):
+            continue
+        jp = str(item.get("japanese") or "").strip()
+        meaning = str(item.get("vietnamese_meaning") or "").strip()
+        nuance = str(item.get("nuance") or "").strip()
+        style = str(item.get("style") or "").strip()
+        if not jp:
+            continue
+        desc_parts = [part for part in (meaning, style, nuance) if part]
+        items.append(
+            ReplySuggestionItem(
+                id=f"s{index + 1}",
+                title=jp[:80],
+                description=" | ".join(desc_parts) if desc_parts else jp,
+            )
+        )
+    return items
 
 
 def build_dashboard_insights(
@@ -1533,9 +1570,16 @@ async def get_translate_context(
     listen_items = [item for item in ui_messages if item.role == "listen"]
     last_listen = listen_items[-1] if listen_items else None
     partner_text = last_listen.text if last_listen else ""
-    translation_text = (
-        (last_listen.translation or "") if last_listen else ""
-    ) or nuance or intent or ""
+    translation_text = ""
+    for item in reversed(ui_messages):
+        translated = (item.translation or "").strip()
+        if translated:
+            translation_text = translated
+            break
+
+    reply_suggestions = build_reply_suggestions_from_messages(messages)
+    if not reply_suggestions:
+        reply_suggestions = build_reply_suggestions(logs)
 
     return TranslateContextResponse(
         conversation_id=conversation_id,
@@ -1544,7 +1588,7 @@ async def get_translate_context(
         intent_analysis=intent,
         nuance_analysis=nuance,
         culture_explanation=culture,
-        reply_suggestions=build_reply_suggestions(logs),
+        reply_suggestions=reply_suggestions,
         partner_text=partner_text,
         translation_text=translation_text,
     )
@@ -1583,10 +1627,10 @@ def add_conversation_message(
         return TranslateMessageItem(
             id=message.message_id,
             role=body.role,
-            text=unpacked["text"],
-            translation=unpacked.get("translation"),
-            note=unpacked.get("note"),
-            tags=unpacked.get("tags") or [],
+            text=body.text.strip(),
+            translation=body.translation,
+            note=body.note,
+            tags=body.tags,
             time=format_message_time(message.created_at),
             is_marked=int(message.is_marked or 0),
         )
