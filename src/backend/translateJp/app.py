@@ -7,6 +7,11 @@ from dotenv import load_dotenv
 
 from service import VoiceTranslationService
 
+try:
+    from src.backend.translateJp.analize_suggest import analyze_and_suggest_chat
+except ModuleNotFoundError:
+    from analize_suggest import analyze_and_suggest_chat
+
 
 load_dotenv(override=True)
 
@@ -29,6 +34,7 @@ class VoiceTranslatorApp:
 
         self.status_var = tk.StringVar(value="Sẵn sàng")
         self._build_ui()
+        self._load_context_from_analysis()
 
     def _build_ui(self):
         try:
@@ -124,6 +130,25 @@ class VoiceTranslatorApp:
             self.left_box.config(text="Văn bản tiếng Việt")
             self.right_box.config(text="Bản dịch tiếng Nhật")
             self.direction_label.config(text="Hướng dịch: Việt -> Nhật")
+
+    def _load_context_from_analysis(self) -> None:
+        try:
+            self._set_status("Đang tải ngữ cảnh từ lịch sử...")
+            analysis = analyze_and_suggest_chat()
+            context_summary = (analysis.get("context_summary") or "").strip()
+            if context_summary:
+                self.context_text.delete("1.0", "end")
+                self.context_text.insert("1.0", context_summary)
+                try:
+                    self.context_text.config(state="disabled")
+                except Exception:
+                    pass
+                self._set_status("Ngữ cảnh đã được nạp từ lịch sử.")
+            else:
+                self._set_status("Không tìm thấy ngữ cảnh trong kết quả phân tích.")
+        except Exception:
+            # If analysis fails, leave the text widget editable so user can input manually
+            self._set_status("Không thể nạp ngữ cảnh; có thể nhập thủ công.")
 
     def _toggle_direction(self):
         if self.direction_var.get() == "ja-to-vi":
