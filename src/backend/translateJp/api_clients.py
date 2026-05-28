@@ -248,6 +248,41 @@ def _groq_chat_translate(
     return translated_text
 
 
+def simplify_japanese(text: str, target_level: str = "N4") -> tuple[str, str | None]:
+    """Simplify a Japanese sentence to a target JLPT level (e.g. N4, N5).
+
+    Returns (simplified_text, warning_or_none).
+    """
+    if not text or not text.strip():
+        raise RuntimeError("Không có văn bản để giản hóa")
+
+    api_key = _groq_api_key()
+    if not api_key:
+        raise RuntimeError("Giai thoấi cần GROQ_API_KEY để giản hóa tiếng Nhật")
+
+    model = os.getenv("GROQ_SIMPLIFY_MODEL", os.getenv("GROQ_ANALYSIS_MODEL", "llama-3.1-8b-instant")).strip()
+    system_prompt = (
+        "Bạn là một chuyên gia tiếng Nhật có nhiệm vụ biến câu tiếng Nhật phức tạp thành câu tiếng Nhật đơn giản hơn "
+        "phù hợp với trình độ JLPT mà người dùng yêu cầu. Giữ nguyên ý nghĩa, làm ngôn ngữ tự nhiên và ngắn gọn. "
+        "BẮT BUỘC chỉ trả về một câu hoặc cụm từ tiếng Nhật duy nhất dùng hiragana/katakana/kanji. CẤM romaji và không giải thích." 
+    )
+
+    user_prompt = f"Câu cần giản hóa:\n{text.strip()}\n\nYêu cầu: Giản hóa xuống trình độ {target_level}. Chỉ trả về câu tiếng Nhật đơn giản tương đương."
+
+    try:
+        simplified = _groq_chat_translate(
+            api_key=api_key,
+            model=model,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=0.2,
+        )
+    except requests.HTTPError as exc:
+        raise RuntimeError(_groq_error_message(exc.response)) from exc
+
+    return simplified, None
+
+
 def translate_vietnamese_to_japanese(text: str, context: str = "") -> tuple[str, str | None]:
     if not text or not text.strip():
         raise RuntimeError("Không có văn bản để dịch")

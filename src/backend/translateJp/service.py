@@ -13,6 +13,7 @@ try:
         speech_to_text,
         translate_japanese_to_vietnamese,
         translate_vietnamese_to_japanese,
+        simplify_japanese,
     )
     from src.backend.translateJp.audio_utils import reduce_noise_file
 except ModuleNotFoundError:
@@ -20,6 +21,7 @@ except ModuleNotFoundError:
         speech_to_text,
         translate_japanese_to_vietnamese,
         translate_vietnamese_to_japanese,
+            simplify_japanese,
     )
     from audio_utils import reduce_noise_file
 
@@ -49,6 +51,8 @@ class VoiceTranslationService:
         context: str = "",
         direction: str = "ja-to-vi",
         status_callback: Callable[[str], None] | None = None,
+        simplify_japanese_flag: bool = False,
+        simplify_level: str = "N4",
     ) -> VoiceTranslationResult:
         if not frames:
             raise RuntimeError("Không có dữ liệu âm thanh để xử lý.")
@@ -58,6 +62,8 @@ class VoiceTranslationService:
             context=context,
             direction=direction,
             status_callback=status_callback,
+            simplify_japanese_flag=simplify_japanese_flag,
+            simplify_level=simplify_level,
         )
 
     def save_frames_to_wav(self, frames: list[np.ndarray], output_path: str) -> None:
@@ -71,6 +77,8 @@ class VoiceTranslationService:
         context: str = "",
         direction: str = "ja-to-vi",
         status_callback: Callable[[str], None] | None = None,
+        simplify_japanese_flag: bool = False,
+        simplify_level: str = "N4",
     ) -> VoiceTranslationResult:
         warnings: list[str] = []
 
@@ -90,10 +98,21 @@ class VoiceTranslationService:
             if status_callback:
                 status_callback("Đang chuyển giọng nói Nhật thành văn bản...")
             transcript = speech_to_text(stt_path, language="ja")
-
-            if status_callback:
-                status_callback("Đang dịch sang tiếng Việt bằng Groq Llama...")
-            translation, warning = translate_japanese_to_vietnamese(transcript, context=context)
+            if simplify_japanese_flag:
+                if status_callback:
+                    status_callback("Đang giản hóa câu tiếng Nhật...")
+                try:
+                    translation, warning = simplify_japanese(transcript, target_level=simplify_level)
+                except Exception as exc:
+                    warnings.append(f"Giản hóa thất bại: {exc}")
+                    # fallback to normal translation
+                    if status_callback:
+                        status_callback("Đang dịch sang tiếng Việt bằng Groq Llama...")
+                    translation, warning = translate_japanese_to_vietnamese(transcript, context=context)
+            else:
+                if status_callback:
+                    status_callback("Đang dịch sang tiếng Việt bằng Groq Llama...")
+                translation, warning = translate_japanese_to_vietnamese(transcript, context=context)
         else:
             if status_callback:
                 status_callback("Đang chuyển giọng nói Việt thành văn bản...")

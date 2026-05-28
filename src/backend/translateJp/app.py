@@ -31,6 +31,8 @@ class VoiceTranslatorApp:
         self.service = VoiceTranslationService(sample_rate=self.sample_rate)
 
         self.direction_var = tk.StringVar(value="ja-to-vi")
+        self.japanese_mode = tk.BooleanVar(value=False)
+        self.simplify_level = tk.StringVar(value="N4")
 
         self.status_var = tk.StringVar(value="Sẵn sàng")
         self._build_ui()
@@ -93,6 +95,23 @@ class VoiceTranslatorApp:
         )
         self.toggle_btn.pack(side="left")
 
+        self.japanese_check = ttk.Checkbutton(
+            button_row,
+            text="Người Nhật",
+            variable=self.japanese_mode,
+            command=self._apply_direction_ui,
+        )
+        self.japanese_check.pack(side="left", padx=(8, 0))
+
+        self.level_combo = ttk.Combobox(
+            button_row,
+            textvariable=self.simplify_level,
+            values=["N4", "N5"],
+            width=4,
+            state="readonly",
+        )
+        self.level_combo.pack(side="left", padx=(6, 0))
+
         self.direction_label = ttk.Label(button_row, text="")
         self.direction_label.pack(side="left", padx=10)
 
@@ -122,6 +141,12 @@ class VoiceTranslatorApp:
             self.left_box.config(text="Văn bản tiếng Nhật")
             self.right_box.config(text="Bản dịch tiếng Việt")
             self.direction_label.config(text="Hướng dịch: Nhật -> Việt")
+            # enable simplify controls for Japanese input
+            try:
+                self.japanese_check.state(["!disabled"])
+                self.level_combo.state(["!disabled"])
+            except Exception:
+                pass
         else:
             self.header_label.config(text="Ghi âm tiếng Việt, xử lý nhiễu và dịch sang tiếng Nhật")
             self.sub_label.config(
@@ -130,6 +155,13 @@ class VoiceTranslatorApp:
             self.left_box.config(text="Văn bản tiếng Việt")
             self.right_box.config(text="Bản dịch tiếng Nhật")
             self.direction_label.config(text="Hướng dịch: Việt -> Nhật")
+            # disable simplify controls when input is Vietnamese
+            try:
+                self.japanese_check.state(["disabled"])
+                self.level_combo.state(["disabled"])
+                self.japanese_mode.set(False)
+            except Exception:
+                pass
 
     def _load_context_from_analysis(self) -> None:
         try:
@@ -222,6 +254,8 @@ class VoiceTranslatorApp:
                 context=context,
                 direction=self.direction_var.get(),
                 status_callback=status_callback,
+                simplify_japanese_flag=self.japanese_mode.get(),
+                simplify_level=self.simplify_level.get(),
             )
 
             self.root.after(
