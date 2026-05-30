@@ -20,6 +20,10 @@ from src.backend.translateJp.analize_suggest import (
     HISTORY_FILE as SUGGEST_HISTORY_FILE,
     analyze_and_suggest_chat,
 )
+from src.backend.translateJp.api_clients import (
+    translate_japanese_to_vietnamese,
+    translate_vietnamese_to_japanese,
+)
 from src.db.session import engine
 from src.repositories.message_repo import message_repo
 from src.models.analysis_models import (
@@ -1290,26 +1294,100 @@ def pack_message_text(
     note: str | None = None,
     tags: list[str] | None = None,
 ) -> str:
-    # Keep DB message text plain for readability and compatibility.
-    # Extra metadata is returned in API response and UI state.
-    return text.strip()
+    """Persist translation only in DB (plain string). Note/tags use minimal JSON."""
+    content = (translation or "").strip() or text.strip()
+    note_clean = (note or "").strip()
+    tag_list = [tag for tag in (tags or []) if tag]
+    if note_clean or tag_list:
+        payload: dict[str, Any] = {"content": content}
+        if note_clean:
+            payload["note"] = note_clean
+        if tag_list:
+            payload["tags"] = tag_list
+        return json.dumps(payload, ensure_ascii=False)
+    return content
 
 
 def unpack_message_text(raw: str) -> dict[str, Any]:
     value = (raw or "").strip()
+    if not value:
+        return {"text": "", "translation": None, "note": None, "tags": []}
+
     if value.startswith("{"):
         try:
             data = json.loads(value)
-            if isinstance(data, dict) and data.get("text"):
+            if isinstance(data, dict):
+                note = data.get("note")
+                tags = data.get("tags") or []
+                legacy_translation = str(data.get("translation") or "").strip()
+                legacy_text = str(data.get("text") or "").strip()
+                if legacy_translation and legacy_text:
+                    return {
+                        "text": legacy_text,
+                        "translation": legacy_translation,
+                        "note": note,
+                        "tags": tags,
+                    }
+                content = (
+                    str(data.get("content") or "").strip()
+                    or legacy_translation
+                    or legacy_text
+                )
                 return {
-                    "text": str(data.get("text", "")),
-                    "translation": data.get("translation"),
-                    "note": data.get("note"),
-                    "tags": data.get("tags") or [],
+                    "text": content,
+                    "translation": None,
+                    "note": note,
+                    "tags": tags,
                 }
         except json.JSONDecodeError:
             pass
+
     return {"text": value, "translation": None, "note": None, "tags": []}
+
+
+_VIETNAMESE_CHARS = re.compile(
+    r"[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]",
+    re.IGNORECASE,
+)
+
+
+def _contains_vietnamese(text: str) -> bool:
+    return bool(_VIETNAMESE_CHARS.search(text or ""))
+
+
+def _contains_japanese(text: str) -> bool:
+    for ch in text or "":
+        if "\u3040" <= ch <= "\u30ff" or "\u4e00" <= ch <= "\u9fff":
+            return True
+    return False
+
+
+def resolve_bilingual_pair(
+    text: str,
+    translation: str | None,
+) -> tuple[str, str]:
+    """Return (japanese, vietnamese) for translate history in VN UI."""
+    primary = (text or "").strip()
+    secondary = (translation or "").strip()
+
+    if primary and secondary:
+        if _contains_vietnamese(primary) and _contains_japanese(secondary):
+            return secondary, primary
+        if _contains_japanese(primary) and _contains_vietnamese(secondary):
+            return primary, secondary
+        if _contains_vietnamese(primary):
+            return secondary, primary
+        return primary, secondary
+
+    if not primary:
+        return "", ""
+
+    if _contains_vietnamese(primary):
+        japanese, _warning = translate_vietnamese_to_japanese(primary)
+        return japanese.strip() or primary, primary
+
+    vietnamese, _warning = translate_japanese_to_vietnamese(primary)
+    return primary, vietnamese.strip()
 
 
 def message_role(message: AnalysisMessage, index: int) -> str:
@@ -1554,12 +1632,19 @@ async def get_translate_context(
     ui_messages = []
     for index, message in enumerate(messages):
         unpacked = unpack_message_text(message.text)
+        display_text = unpacked["text"]
+        display_translation = unpacked.get("translation")
+        if lang == "vn":
+            display_text, display_translation = resolve_bilingual_pair(
+                display_text,
+                display_translation,
+            )
         ui_messages.append(
             TranslateMessageItem(
                 id=message.message_id or index,
                 role=message_role(message, index),
-                text=unpacked["text"],
-                translation=unpacked.get("translation"),
+                text=display_text,
+                translation=display_translation or None,
                 note=unpacked.get("note"),
                 tags=unpacked.get("tags") or [],
                 time=format_message_time(message.created_at),
@@ -1621,8 +1706,6 @@ def add_conversation_message(
 
         if message.message_id is None:
             raise HTTPException(status_code=500, detail="Could not save message")
-
-        unpacked = unpack_message_text(message.text)
 
         return TranslateMessageItem(
             id=message.message_id,

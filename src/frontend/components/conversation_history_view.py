@@ -5,6 +5,8 @@ from typing import Any
 
 from nicegui import ui
 
+from src.core.i18n import _
+
 
 def conversation_history_view(
     *,
@@ -12,11 +14,13 @@ def conversation_history_view(
     messages: list[dict],
     max_height: str | None = None,
     on_mark: Callable[[int], Any] | None = None,
+    lang: str = "vn",
 ) -> ui.element:
     """Scrollable chat history with optional translation and insight blocks."""
     container = ui.element("div").classes(
         "w-full rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
     )
+    bilingual = lang == "vn"
 
     with container:
         ui.label(title).classes("text-sm font-semibold text-slate-700 mb-3")
@@ -33,9 +37,9 @@ def conversation_history_view(
                 role = message.get("role", "you")
                 is_listen = role == "listen"
                 card_classes = (
-                    "border-amber-200 bg-amber-50"
+                    "border-amber-300 bg-amber-50"
                     if is_listen
-                    else "border-sky-200 bg-sky-50"
+                    else "border-blue-300 bg-blue-50"
                 )
                 with ui.element("div").classes(
                     f"rounded-xl border p-3 w-full {card_classes}"
@@ -67,22 +71,41 @@ def conversation_history_view(
                                     mark_btn.on("click", on_mark_click)
                             ui.label(message.get("time", ""))
 
-                    ui.label(message.get("text", "")).classes(
-                        "text-sm text-slate-800 mt-1 whitespace-pre-wrap"
-                    )
-
-                    translation = message.get("translation")
-                    if translation:
-                        ui.label(translation).classes(
-                            "text-sm text-slate-600 mt-2 whitespace-pre-wrap"
+                    if bilingual:
+                        ja_text = (message.get("text") or "").strip()
+                        vi_text = (message.get("translation") or "").strip()
+                        if ja_text:
+                            ui.label(_("history_ja_label", lang)).classes(
+                                "text-[10px] font-semibold uppercase text-slate-500 "
+                                "mt-1 tracking-wide"
+                            )
+                            ui.label(ja_text).classes(
+                                "text-sm text-slate-900 whitespace-pre-wrap"
+                            )
+                        if vi_text:
+                            ui.label(_("history_vi_label", lang)).classes(
+                                "text-[10px] font-semibold uppercase text-slate-500 "
+                                "mt-2 tracking-wide"
+                            )
+                            ui.label(vi_text).classes(
+                                "text-sm text-slate-800 whitespace-pre-wrap"
+                            )
+                    else:
+                        ui.label(message.get("text", "")).classes(
+                            "text-sm text-slate-800 mt-1 whitespace-pre-wrap"
                         )
+                        translation = message.get("translation")
+                        if translation:
+                            ui.label(translation).classes(
+                                "text-sm text-slate-600 mt-2 whitespace-pre-wrap"
+                            )
 
                     note = message.get("note")
                     if note:
                         note_classes = (
                             "border-amber-300 bg-amber-100/80 text-amber-900"
                             if is_listen
-                            else "border-emerald-300 bg-emerald-50 text-emerald-900"
+                            else "border-blue-300 bg-blue-100/80 text-blue-900"
                         )
                         with ui.element("div").classes(
                             f"mt-2 rounded-lg border px-3 py-2 text-xs "

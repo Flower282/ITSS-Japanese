@@ -1,6 +1,2 @@
-{"text": "はじめまして、みなさん。私は勝です。ヤクザです。", "translation": "xin chào các bạn, tôi tên Thắng, là Yakuza", "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự", "tags": ["Lịch sự"]}
-{"text": "こんにちは。私はドーソン・クイーと申します。よろしくお願いします。", "translation": "Xin chào. Tôi là Dōson Kuī, vui lòng được biết đến."}
-{"text": "ベトナム側は再確認してください", "translation": "Phía Việt Nam nên hỏi lại để xác nhận danh tính của Thắng", "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự", "tags": ["Lịch sự"]}
-{"text": "おまけな", "translation": "Bản dịch tiếng Việt:\nMột món quà kèm theo"}
-{"text": "こんにちは", "translation": "Xin chào."}
-{"text": "こんにちは、私はタムです。", "translation": "Xin chào, tôi là Tâm."}
+{"text": "こんにちは。私はHangです。日本語についていきます。", "translation": "Xin chào. Tôi là Hang. Tôi sẽ nói tiếng Nhật."}
+{"text": "おはようございます。何をすればいいでしょうか。", "translation": "chào hằng hãy cho tôi biết  rằng tôi cần làm việc gì được không", "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự", "tags": ["Lịch sự"]}

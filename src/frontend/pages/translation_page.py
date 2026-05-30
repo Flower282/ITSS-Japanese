@@ -182,6 +182,7 @@ def translation_page(conversation_id: int | None = None) -> None:
                 messages=state["messages"],
                 max_height="560px",
                 on_mark=handle_mark_message,
+                lang=lang,
             )
 
     async def ensure_conversation_id() -> int | None:
