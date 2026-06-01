@@ -29,6 +29,281 @@ from src.repositories.cultural_assistant_repo import (
 )
 
 
+FALLBACK_DETAILS = {
+    "vn": {
+        "Kính ngữ (Keigo)": """
+### 1. Tổng quan về Kính ngữ (Keigo - 敬語)
+Kính ngữ là hệ thống ngôn ngữ phân cấp đặc trưng trong tiếng Nhật, được sử dụng để thể hiện sự tôn trọng, lịch sự và duy trì khoảng cách xã hội phù hợp giữa những người tham gia giao tiếp. Việc sử dụng kính ngữ phụ thuộc vào tuổi tác, chức vụ, mức độ thân thiết và mối quan hệ "trong - ngoài" (Uchi - Soto).
+
+---
+
+### 2. Phân loại Kính ngữ
+Kính ngữ trong tiếng Nhật được chia làm 3 nhóm chính:
+
+#### 1. Lịch sự ngữ (Teineigo - 丁寧語)
+- **Đặc điểm:** Là hình thức lịch sự cơ bản nhất, dùng hàng ngày với đồng nghiệp, người mới quen hoặc trong cuộc sống công cộng.
+- **Dấu hiệu nhận biết:** Thêm đuôi `です (desu)` sau danh từ/tính từ hoặc `ます (masu)` sau động từ.
+- **Ví dụ:** 
+  - 行きます (Ikimasu - Đi)
+  - 美しいです (Utsukushii desu - Đẹp)
+
+#### 2. Tôn kính ngữ (Sonkeigo - 尊敬語)
+- **Đặc điểm:** Dùng để **nâng cao** hành động, trạng thái của đối phương (khách hàng, cấp trên, đối tác) lên nhằm thể hiện sự tôn kính sâu sắc.
+- **Quy tắc chuyển đổi:**
+  - Thêm tiền tố `お` hoặc `ご` kết hợp với động từ thể liên dụng.
+  - Sử dụng các động từ tôn kính đặc biệt (Ví dụ: `irassharu` thay cho `iru`/`kuru`/`iku`).
+- **Ví dụ:**
+  - 社長が**お帰りになります** (Giám đốc đi về)
+  - どちらから**いらっしゃいました**か (Anh/chị đến từ đâu ạ?)
+
+#### 3. Khiêm nhường ngữ (Kenjougo - 謙譲語)
+- **Đặc điểm:** Dùng để **hạ thấp** hành động của bản thân hoặc người thuộc nhóm của mình (Uchi) nhằm gián tiếp tôn vinh đối phương lên.
+- **Quy tắc chuyển đổi:**
+  - Thêm tiền tố `お` hoặc `ご` + động từ + `します`.
+  - Sử dụng các động từ khiêm nhường đặc biệt (Ví dụ: `伺います` thay cho `行く`/`nghe`).
+- **Ví dụ:**
+  - 資料を**お持ちいたします** (Tôi xin phép cầm tài liệu)
+  - 明日, オフィスへ**伺います** (Ngày mai tôi sẽ ghé qua văn phòng)
+
+---
+
+### 3. Lưu ý khi dùng Keigo trong môi trường IT Startup
+> [!IMPORTANT]
+> - **Tránh quá trang trọng:** Trong môi trường startup trẻ trung, năng động, việc lạm dụng Sonkeigo/Kenjougo mức độ cao có thể tạo khoảng cách và làm chậm nhịp độ làm việc.
+> - **Tập trung vào sự rõ ràng:** Lịch sự cơ bản `đều dùng desu / masu` kết hợp thái độ cầu thị thường là lựa chọn tối ưu nhất.
+""",
+        "Phong cách phản hồi": """
+### 1. Ý thức duy trì sự hài hòa (Wa - 和)
+Trong văn hóa công sở Nhật Bản, sự hòa thuận và nhất trí trong tập thể được đặt lên hàng đầu. Phong cách phản hồi công việc của người Nhật tập trung vào việc bảo vệ thể diện (Mentsu) cho đối phương và tránh gây ra xung đột trực tiếp.
+
+---
+
+### 2. Các quy tắc giao tiếp quan trọng
+
+#### 1. Tránh nói từ chối trực tiếp (Tránh từ "Không")
+- Người Nhật cực kỳ hạn chế dùng từ `いいえ (Iie - Không)` vì nó mang cảm giác thô lỗ và cự tuyệt.
+- Thay vào đó, họ sẽ dùng các diễn đạt giảm nhẹ, gián tiếp như:
+  - **ちょっと難しいです (Chotto muzukashii desu):** Thực tế nghĩa là "Không thể làm được".
+  - **検討します (Kentou shimasu) / 考えさせてください (Kangaesete kudasai):** "Để tôi suy nghĩ thêm", thường là một cách từ chối lịch sự.
+- **Bài học:** Khi đối tác nói những câu này, hãy chuẩn bị các phương án thay thế thay vì tiếp tục chờ đợi vô ích.
+
+#### 2. Lắng nghe và đồng tình trước khi góp ý (Aizuchi)
+- Trong các cuộc họp, hãy liên tục sử dụng các từ đệm biểu thị sự chú ý lắng nghe như `はい (Hai)`, `なるほど (Naruhodo)`, `そうですね (Sou desu ne)`.
+- Khi muốn phản biện, hãy áp dụng công thức **"Yes, but..."**: Đồng tình với nỗ lực hoặc ý kiến của họ trước, sau đó mới nhẹ nhàng đưa ra góc nhìn cá nhân bằng từ nối `しかし (Shikashi)` hoặc `ただ (Tada)`.
+
+#### 3. Ý nghĩa thực tế của thời hạn "Càng sớm càng tốt" (Narubeku Hayaku)
+- Trong môi trường làm việc Nhật Bản, `なるべく早く (Narubeku hayaku)` hoặc `được thời hạn càng sớm càng tốt` thường không phải là "khi nào rảnh thì làm".
+- Nó thực chất mang ý nghĩa **"Ngay lập tức / Ưu tiên tối đa"**. Hãy bắt tay vào làm ngay hoặc chủ động báo cáo khoảng thời gian cụ thể bạn sẽ hoàn thành.
+
+---
+
+### 3. Lời khuyên thực chiến từ AI
+> [!TIP]
+> Hãy luôn chủ động cập nhật tiến độ công việc (báo cáo trung gian) để tạo sự tin tưởng tuyệt đối với quản lý người Nhật, thay vì chỉ báo cáo khi đã hoàn thành 100% công việc.
+""",
+        "Văn hóa cảm ơn và xin lỗi": """
+### 1. Sức mạnh của lòng biết ơn và sự nhận trách nhiệm
+Người Nhật thường xuyên sử dụng lời cảm ơn và xin lỗi không chỉ để biểu thị lòng biết ơn hay nhận sai lầm, mà sâu xa hơn là để bôi trơn các mối quan hệ, giảm bớt căng thẳng và giữ gìn sự hòa hợp chung.
+
+---
+
+### 2. Hướng dẫn sử dụng chi tiết
+
+#### 1. Cảm ơn ngay cả với những sự trợ giúp nhỏ nhất
+- Việc nói `ありがとうございます (Arigatou gozaimasu)` với đồng nghiệp hỗ trợ mình (như pha trà, chuẩn bị tài liệu, fix giúp 1 bug nhỏ) được coi là phép lịch sự tối thiểu.
+- Việc ghi nhận công sức của người khác giúp tạo ra một môi trường làm việc tích cực và gắn kết.
+
+#### 2. Triết lý xin lỗi đặc trưng
+- Đối với người Nhật, lời xin lỗi `すみません (Sumimasen)` hoặc `申し訳ありません (Moushiwake arimasen)` nhiều khi không đồng nghĩa với việc nhận lỗi hoàn toàn về mình.
+- Nó thể hiện:
+  - **Sự đồng cảm:** "Tôi xin lỗi vì sự cố này đã gây phiền toái/làm mất thời gian của anh/chị".
+  - **Sự chu đáo:** Quan tâm đến cảm xúc và khó khăn của người đối diện.
+- **Lưu ý cực kỳ quan trọng:** Khi có sự cố, hãy ưu tiên xin lỗi trước để làm dịu bầu không khí, sau đó cùng tập trung phân tích nguyên nhân và đưa ra giải pháp giải quyết triệt để.
+
+#### 3. Cách lựa chọn cụm từ phổ biến
+- **ありがとうございます (Arigatou gozaimasu):** Dùng để cảm ơn lịch sự.
+- **すみません (Sumimasen):** Dùng cho các lỗi nhỏ, xin lỗi xã giao, hoặc khi làm phiền ai đó (giống như "Excuse me").
+- **申し訳ありません (Moushiwake arimasen):** Lời xin lỗi trang trọng, chân thành nhất khi phạm sai lầm nghiêm trọng trong công việc ảnh hưởng đến dự án/khách hàng.
+
+---
+
+### 3. Lời khuyên từ AI
+> [!WARNING]
+> Tránh lạm dụng từ "Sumimasen" để thay thế cho lời cảm ơn. Nếu đồng nghiệp hỗ trợ bạn nhiệt tình, hãy ưu tiên nói "Arigatou gozaimasu" để họ cảm thấy công sức của mình được trân trọng xứng đáng!
+"""
+    },
+    "jp": {
+        "敬語（けいご）": """
+### 1. 敬語（けいご）の概要
+敬語は日本語特有の階層的な言語システムであり、話し手が聞き手や話題の人物に対して敬意を表すために用いられます。年齢、職務上の地位、親密度、そして「ウチ・ソト」の関係性に基づいて適切に使い分ける必要があります。
+
+---
+
+### 2. 敬語の3大分類
+
+#### 1. 丁寧語（ていねいご）
+- **特徴:** 最も基本的な敬語表現であり、同僚や初対面の人、あるいは公の場で日常的に使用されます。
+- **表現パターン:** 名詞や形容詞の後に「です」を、動詞の後に「ます」を付けます。
+- **例:** 
+  - 行きます
+  - 美しいです
+
+#### 2. 尊敬語（そんけいご）
+- **特徴:** 聞き手や話題の人物（顧客、上司、取引先）の行為や状態を**高めて**表現することで、深い敬意を示します。
+- **表現パターン:** 
+  - 「お（ご）〜なる」の形をとる。
+  - 特別な尊敬動詞を使用する（例：「いる/来る/行く」→「いらっしゃる」）。
+- **例:**
+  - 社長が**お帰りになります**。
+  - どちらから**いらっしゃいました**か。
+
+#### 3. 謙譲語（けんじょうご）
+- **特徴:** 話し手自身や身内（ウチ）の行為を**低めて**表現することで、相対的に相手を高く位置づけ、敬意を示します。
+- **表現パターン:** 
+  - 「お（ご）〜する」の形をとる。
+  - 特別な謙譲動詞を使用する（例：「行く/聞く」→「伺う」）。
+- **例:**
+  - 資料を**お持ちいたします**。
+  - 明日、オフィスへ**伺います**。
+
+---
+
+### 3. ITスタートアップでの敬語使用の注意点
+> [!IMPORTANT]
+> - **過度な敬語の回避:** 若くダイナミックなスタートアップ環境では、過度に丁寧な二重敬語や最高度の敬語は距離感を生み、コミュニケーションのスピードを低下させることがあります。
+> - **明確さを重視:** 基本的な「です・ます」調をベースに、前向きでフラットなコミュニケーションを心がけるのが最適です。
+""",
+        "返答スタイル": """
+### 1. 調和（和）を重んじる返答スタイル
+日本のビジネス文化では、組織内の調和と合意形成（根回し）が重視されます。相手の面目（メンツ）を保ち、直接的な衝突を避けるための対話スタイルが一般的です。
+
+---
+
+### 2. 重要なコミュニケーションのルール
+
+#### 1. 直接的な否定を避ける（「いいえ」を言わない）
+- 日本人は「いいえ」と直接拒絶することを好まず、相手に配慮した間接的な表現を好みます。
+- 代表的なクッション言葉や間接表現：
+  - **ちょっと難しいです:** 実際には「できません」という意味です。
+  - **検討します / 考えさせてください:** 丁寧な断り文句として使われることが多々あります。
+- **教訓:** パートナーがこれらの表現を使った場合、単に待つのではなく、別の代替案を用意しアプローチを切り替えましょう。
+
+#### 2. 反論の前にまず同調する（相槌）
+- 会話中には常に「はい」「なるほど」「そうですね」といった相槌を打ち、聞いている姿勢を示します。
+- 異なる意見を述べたい時は、まず相手の労力や意見を受け入れ（Yes）、その後に「しかし」「ただ」を用いて柔らかく自身の見解を述べます（Yes-But法）。
+
+#### 3. 「なるべく早く」というデッドラインの真意
+- 日本の仕事環境における「なるべく早く」や「できるだけ早く」は、「手が空いた時で良い」という意味ではありません。
+- 実際には**「最優先で・今すぐに」**処理してほしいという強い意図があります。すぐに作業に着手するか、具体的な完了予定時刻を速やかに報告しましょう。
+
+---
+
+### 3. 実践的なAIのアドバイス
+> [!TIP]
+> 進捗が100%になるのを待ってから報告するのではなく、進捗が30%や50%の段階で中間報告（ホウレンソウ - 報告・連絡・相談）を行うことで、日本人マネージャーとの信頼関係が劇的に向上します。
+""",
+        "感謝とお詫びの文化": """
+### 1. 感謝と謝罪による調和の維持
+日本人は感謝やお詫びの言葉を頻繁に口にします。これは単にお礼を言ったり非を認めたりするだけでなく、関係性を円滑にし、不必要な摩擦を避けてコミュニティの「調和」を維持するための重要なマナーです。
+
+---
+
+### 2. 具体的なガイドライン
+
+#### 1. 小さな支援に対しても感謝を示す
+- 資料を用意してくれた、バグの特定を手伝ってくれたなど、どんなに小さなサポートに対しても「ありがとうございます」と声に出して伝えるのが基本です。
+- 他者の貢献をオープンに認めることで、ポジティブなチーム環境が築かれます。
+
+#### 2. 日本特有のお詫びの哲学
+- ビジネスシーンでの「すみません」や「申し訳ありません」は、必ずしも自分が100%悪いと認めているわけではありません。
+- 以下の意味も含まれています：
+  - **共感の表明:** 「このトラブルによってお手間をとらせてしまい申し訳ありません」
+  - **配慮の表明:** 相手の状況や心情に寄り添う姿勢。
+- **最優先事項:** 問題が発生した際は、理由を言い訳する trước khi 謝るのではなく、まず状況に対してお詫びをし、その後迅速に原因調査と対策の議論に移行しましょう。
+
+#### 3. 状況に応じた表現の使い分け
+- **ありがとうございます:** 丁寧な感謝の表現。
+- **すみません:** 軽いお詫び、クッション言葉、注意を引く際（Excuse me）に使用。
+- **申し訳ありません:** 重大なミスを犯した際や、顧客・社外に対して誠心誠意お詫びする際の最もフォーマルな表現。
+
+---
+
+### 3. AIからのアドバイス
+> [!WARNING]
+> 感謝の代わりに「すみません」を使いすぎるのを避けましょう。同僚が親身になって助けてくれた際は、ぜひ「ありがとうございます！」と伝えることで、相手への敬意と感謝がよりストレートに伝わります。
+"""
+    }
+}
+
+
+def parse_markdown_content(file_path: str = "content.md") -> dict[str, str]:
+    """Parse sections from content.md by header.
+    Looks for lines starting with '#' or '##' and grabs subsequent text.
+    """
+    import os
+    sections = {}
+    if not os.path.exists(file_path):
+        return sections
+    
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        
+        current_header = None
+        current_lines = []
+        
+        for line in lines:
+            if line.startswith("#") and not line.startswith("##"):
+                if current_header:
+                    sections[current_header] = "".join(current_lines).strip()
+                current_header = line.lstrip("#").strip()
+                current_lines = []
+            else:
+                if current_header is not None:
+                    current_lines.append(line)
+                    
+        if current_header and current_lines:
+            sections[current_header] = "".join(current_lines).strip()
+    except Exception as e:
+        print(f"Error parsing markdown: {e}")
+        
+    return sections
+
+
+def get_detail_content(title: str, lang: str) -> str:
+    """Gets detail content for a specific handbook section from content.md or fallback."""
+    parsed_sections = parse_markdown_content()
+    
+    # Try exact match first
+    if title in parsed_sections:
+        return parsed_sections[title]
+    
+    # Try normalized match (case-insensitive, strip parentheses/punctuation)
+    def normalize(s: str) -> str:
+        import re
+        s = s.lower()
+        s = re.sub(r'\(.*?\)', '', s)
+        s = re.sub(r'[^\w\s\u00C0-\u1EF9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]', '', s)
+        return s.strip()
+        
+    norm_title = normalize(title)
+    for sect_title, sect_content in parsed_sections.items():
+        if normalize(sect_title) == norm_title or norm_title in normalize(sect_title) or normalize(sect_title) in norm_title:
+            return sect_content
+            
+    # 2. Fallback to our hardcoded detailed explanations
+    fallback_lang = FALLBACK_DETAILS.get(lang, FALLBACK_DETAILS["vn"])
+    if title in fallback_lang:
+        return fallback_lang[title]
+        
+    # Match in fallback keys using normalization
+    for key, val in fallback_lang.items():
+        if normalize(key) == norm_title or norm_title in normalize(key) or normalize(key) in norm_title:
+            return val
+            
+    return "Không tìm thấy nội dung chi tiết cho mục này." if lang == "vn" else "この項目の詳細内容は見つかりませんでした。"
+
+
 @ui.page("/culture")
 def culture_page() -> None:
     layout_state = UiState()
@@ -46,6 +321,13 @@ def culture_page() -> None:
 
     roadmap_loading = True
     roadmap_text = ""
+
+    selected_handbook_item = {
+        "title": "",
+        "description": "",
+        "icon": "🙇",
+        "details_markdown": ""
+    }
 
     @ui.refreshable
     def render_roadmap_content() -> None:
@@ -82,6 +364,66 @@ def culture_page() -> None:
             )
         
         render_roadmap_content()
+
+    with ui.dialog().classes("rounded-2xl") as handbook_dialog, ui.card().classes(
+        "w-[700px] h-[650px] max-w-full p-6 rounded-2xl border border-slate-100 shadow-2xl bg-white overflow-hidden flex flex-col"
+    ):
+        @ui.refreshable
+        def render_handbook_dialog_content() -> None:
+            nonlocal selected_handbook_item
+            title = selected_handbook_item.get("title", "")
+            description = selected_handbook_item.get("description", "")
+            icon = selected_handbook_item.get("icon", "🙇")
+            details_markdown = selected_handbook_item.get("details_markdown", "")
+
+            with ui.row().classes("w-full items-center justify-between mb-4 border-b border-slate-100 pb-2"):
+                with ui.row().classes("items-center gap-2.5"):
+                    icon_box = ui.element("div").classes(
+                        "h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 "
+                        "flex items-center justify-center flex-shrink-0 text-xl font-bold"
+                    )
+                    with icon_box:
+                        if len(icon) == 1 or icon in ["🙇", "💬", "🙏"]:
+                            ui.label(icon).classes("text-xl")
+                        else:
+                            ui.icon(icon).classes("text-xl text-emerald-600")
+                    ui.label(title).classes("text-base font-bold text-slate-800")
+                ui.button(icon="close", on_click=handbook_dialog.close).props('flat round').classes(
+                    "text-slate-400 hover:text-slate-600"
+                )
+
+            with ui.column().classes("w-full gap-4 flex-1 overflow-y-auto pr-2"):
+                if description:
+                    with ui.row().classes("w-full gap-3 bg-slate-50 border-l-4 border-emerald-500 p-4 rounded-r-2xl"):
+                        ui.label(description).classes(
+                            "text-sm text-slate-600 leading-relaxed font-medium italic"
+                        )
+
+                if details_markdown:
+                    ui.markdown(details_markdown).classes(
+                        "text-sm text-slate-700 leading-relaxed markdown-body "
+                        "prose prose-slate max-w-full"
+                    )
+        
+        render_handbook_dialog_content()
+
+    def handle_handbook_click(item: dict) -> None:
+        nonlocal selected_handbook_item
+        title = item.get("title", "")
+        description = item.get("description", "")
+        icon = item.get("icon", "🙇")
+        
+        details_markdown = get_detail_content(title, lang)
+        
+        selected_handbook_item = {
+            "title": title,
+            "description": description,
+            "icon": icon,
+            "details_markdown": details_markdown
+        }
+        
+        render_handbook_dialog_content.refresh()
+        handbook_dialog.open()
 
     def handle_new_conversation() -> None:
         ui.navigate.to("/translate")
@@ -140,6 +482,19 @@ def culture_page() -> None:
                         "tags": ["直接的な言い方を避ける", "提案する前に聞く"],
                         "link_label": "続きを読む",
                         "link_href": nav("/analysis", lang),
+                    },
+                    {
+                        "title": "感謝とお詫びの文化",
+                        "description": "日本人はコミュニケーションの調和を保つために、頻繁に感謝とお詫びの言葉を使います。",
+                        "icon": "🙏",
+                        "tags": [
+                            "小さな親切に対しても感謝する",
+                            "お詫びは必ずしも全面的に非を認めるだけでなく、相手への気遣いを示す",
+                            "よく使われる表現：ありがとうございます、すみません、申し訳ありません",
+                            "感情を強く表現することよりも丁寧さが重んじられる",
+                        ],
+                        "link_label": "続きを読む",
+                        "link_href": "#",
                     }
                 ]
                 scenarios = []
@@ -215,6 +570,18 @@ def culture_page() -> None:
                         "description": "Tôn trọng nhịp độ phản hồi và giữ thể diện trong trao đổi công việc.",
                         "icon": "💬",
                         "tags": ["Tránh nói thẳng", "Lắng nghe trước khi góp ý"],
+                        "link_label": "Đọc tiếp",
+                        "link_href": "#",
+                    },
+                    {
+                        "title": "Văn hóa cảm ơn và xin lỗi",
+                        "description": "Người Nhật thường xuyên sử dụng lời cảm ơn và xin lỗi để duy trì sự hài hòa trong giao tiếp.",
+                        "icon": "🙏",
+                        "tags": [
+                            "Thường xuyên cảm ơn và xin lỗi.",
+                            "ありがとうございます, すみません.",
+                            "Duy trì sự tôn trọng."
+                        ],
                         "link_label": "Đọc tiếp",
                         "link_href": "#",
                     },
@@ -357,7 +724,9 @@ def culture_page() -> None:
                             "text-sm font-semibold text-slate-700"
                         )
                         insight_list(
-                            items=page_state["handbook_items"], max_height="300px"
+                            items=page_state["handbook_items"],
+                            max_height="300px",
+                            on_link_click=handle_handbook_click,
                         )
 
                 with ui.column().classes("flex-1 gap-4"):

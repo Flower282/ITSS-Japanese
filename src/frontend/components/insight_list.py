@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+from typing import Callable
 from nicegui import ui
 
 
-def insight_list(*, items: list[dict], max_height: str | None = None) -> ui.element:
+def insight_list(
+    *,
+    items: list[dict],
+    max_height: str | None = None,
+    on_link_click: Callable[[dict], None] | None = None,
+) -> ui.element:
     """Render a list of cultural handbook entries with optional details."""
     container = ui.element("div").classes(
         "w-full rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
@@ -51,8 +57,13 @@ def insight_list(*, items: list[dict], max_height: str | None = None) -> ui.elem
 
                         link_label = item.get("link_label")
                         if link_label:
-                            ui.link(link_label, item.get("link_href", "#")).classes(
-                                "text-xs text-blue-600 hover:text-blue-800 transition-colors font-medium mt-1"
-                            )
+                            if on_link_click:
+                                ui.link(link_label, "javascript:void(0)").classes(
+                                    "text-xs text-blue-600 hover:text-blue-800 transition-colors font-medium mt-1"
+                                ).on("click", lambda e, it=item: on_link_click(it))
+                            else:
+                                ui.link(link_label, item.get("link_href", "#")).classes(
+                                    "text-xs text-blue-600 hover:text-blue-800 transition-colors font-medium mt-1"
+                                )
 
     return container
