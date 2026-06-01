@@ -643,7 +643,7 @@ def culture_page() -> None:
 
             page_state["culture_insight"] = ai_insight_text or _('ai_culture_insight', lang)
             page_state["handbook_items"] = handbook_items
-            page_state["scenarios"] = scenarios
+            page_state["scenarios"] = scenarios[::-1]
         except Exception as exc:
             print(f"Error loading culture data: {exc}")
             page_state["culture_insight"] = _('ai_culture_insight', lang)
