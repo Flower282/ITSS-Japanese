@@ -1,3 +1,2 @@
-Người Nhật (Tanaka): 今週の金曜日、仕事が終わったら一緒に飲みに行きませんか？ (Thứ sáu tuần này, sau khi xong việc cậu có muốn đi uống cùng không?)
-Người Việt (Bạn): Dạ, em rất muốn đi ạ. Mấy giờ thì được ạ?
-Người Nhật (Tanaka): 19時ごろはどうですか？新宿駅で待ち合わせしましょう。 (Khoảng 19h thì sao? Chúng ta hẹn gặp ở ga Shinjuku nhé.)
+{"text": "こんにちは。私はHangです。日本語についていきます。", "translation": "Xin chào. Tôi là Hang. Tôi sẽ nói tiếng Nhật."}
+{"text": "おはようございます。何をすればいいでしょうか。", "translation": "chào hằng hãy cho tôi biết  rằng tôi cần làm việc gì được không", "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự", "tags": ["Lịch sự"]}

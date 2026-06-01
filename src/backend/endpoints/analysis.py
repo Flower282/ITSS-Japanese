@@ -6,6 +6,7 @@ import re
 import unicodedata
 from datetime import datetime
 from difflib import SequenceMatcher
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -15,6 +16,14 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from src.backend.endpoints.analysis_pdf import build_analysis_pdf
+from src.backend.translateJp.analize_suggest import (
+    HISTORY_FILE as SUGGEST_HISTORY_FILE,
+    analyze_and_suggest_chat,
+)
+from src.backend.translateJp.api_clients import (
+    translate_japanese_to_vietnamese,
+    translate_vietnamese_to_japanese,
+)
 from src.db.session import engine
 from src.repositories.message_repo import message_repo
 from src.models.analysis_models import (
@@ -1285,33 +1294,100 @@ def pack_message_text(
     note: str | None = None,
     tags: list[str] | None = None,
 ) -> str:
-    payload: dict[str, Any] = {"text": text.strip()}
-    if translation:
-        payload["translation"] = translation.strip()
-    if note:
-        payload["note"] = note.strip()
-    if tags:
-        payload["tags"] = [tag for tag in tags if tag]
-    if len(payload) > 1:
+    """Persist translation only in DB (plain string). Note/tags use minimal JSON."""
+    content = (translation or "").strip() or text.strip()
+    note_clean = (note or "").strip()
+    tag_list = [tag for tag in (tags or []) if tag]
+    if note_clean or tag_list:
+        payload: dict[str, Any] = {"content": content}
+        if note_clean:
+            payload["note"] = note_clean
+        if tag_list:
+            payload["tags"] = tag_list
         return json.dumps(payload, ensure_ascii=False)
-    return text.strip()
+    return content
 
 
 def unpack_message_text(raw: str) -> dict[str, Any]:
     value = (raw or "").strip()
+    if not value:
+        return {"text": "", "translation": None, "note": None, "tags": []}
+
     if value.startswith("{"):
         try:
             data = json.loads(value)
-            if isinstance(data, dict) and data.get("text"):
+            if isinstance(data, dict):
+                note = data.get("note")
+                tags = data.get("tags") or []
+                legacy_translation = str(data.get("translation") or "").strip()
+                legacy_text = str(data.get("text") or "").strip()
+                if legacy_translation and legacy_text:
+                    return {
+                        "text": legacy_text,
+                        "translation": legacy_translation,
+                        "note": note,
+                        "tags": tags,
+                    }
+                content = (
+                    str(data.get("content") or "").strip()
+                    or legacy_translation
+                    or legacy_text
+                )
                 return {
-                    "text": str(data.get("text", "")),
-                    "translation": data.get("translation"),
-                    "note": data.get("note"),
-                    "tags": data.get("tags") or [],
+                    "text": content,
+                    "translation": None,
+                    "note": note,
+                    "tags": tags,
                 }
         except json.JSONDecodeError:
             pass
+
     return {"text": value, "translation": None, "note": None, "tags": []}
+
+
+_VIETNAMESE_CHARS = re.compile(
+    r"[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]",
+    re.IGNORECASE,
+)
+
+
+def _contains_vietnamese(text: str) -> bool:
+    return bool(_VIETNAMESE_CHARS.search(text or ""))
+
+
+def _contains_japanese(text: str) -> bool:
+    for ch in text or "":
+        if "\u3040" <= ch <= "\u30ff" or "\u4e00" <= ch <= "\u9fff":
+            return True
+    return False
+
+
+def resolve_bilingual_pair(
+    text: str,
+    translation: str | None,
+) -> tuple[str, str]:
+    """Return (japanese, vietnamese) for translate history in VN UI."""
+    primary = (text or "").strip()
+    secondary = (translation or "").strip()
+
+    if primary and secondary:
+        if _contains_vietnamese(primary) and _contains_japanese(secondary):
+            return secondary, primary
+        if _contains_japanese(primary) and _contains_vietnamese(secondary):
+            return primary, secondary
+        if _contains_vietnamese(primary):
+            return secondary, primary
+        return primary, secondary
+
+    if not primary:
+        return "", ""
+
+    if _contains_vietnamese(primary):
+        japanese, _warning = translate_vietnamese_to_japanese(primary)
+        return japanese.strip() or primary, primary
+
+    vietnamese, _warning = translate_japanese_to_vietnamese(primary)
+    return primary, vietnamese.strip()
 
 
 def message_role(message: AnalysisMessage, index: int) -> str:
@@ -1347,6 +1423,45 @@ def build_reply_suggestions(logs: list[AnalysisLog]) -> list[ReplySuggestionItem
         )
 
     return suggestions
+
+
+def build_reply_suggestions_from_messages(
+    messages: list[AnalysisMessage],
+) -> list[ReplySuggestionItem]:
+    transcript = "\n".join((message.text or "").strip() for message in messages if message.text)
+    if not transcript.strip():
+        return []
+    try:
+        history_path = Path(SUGGEST_HISTORY_FILE)
+        history_path.parent.mkdir(parents=True, exist_ok=True)
+        history_path.write_text(transcript, encoding="utf-8")
+        analyzed = analyze_and_suggest_chat(history_path)
+    except Exception:
+        return []
+
+    suggestions = analyzed.get("suggestions")
+    if not isinstance(suggestions, list):
+        return []
+
+    items: list[ReplySuggestionItem] = []
+    for index, item in enumerate(suggestions):
+        if not isinstance(item, dict):
+            continue
+        jp = str(item.get("japanese") or "").strip()
+        meaning = str(item.get("vietnamese_meaning") or "").strip()
+        nuance = str(item.get("nuance") or "").strip()
+        style = str(item.get("style") or "").strip()
+        if not jp:
+            continue
+        desc_parts = [part for part in (meaning, style, nuance) if part]
+        items.append(
+            ReplySuggestionItem(
+                id=f"s{index + 1}",
+                title=jp[:80],
+                description=" | ".join(desc_parts) if desc_parts else jp,
+            )
+        )
+    return items
 
 
 def build_dashboard_insights(
@@ -1517,12 +1632,19 @@ async def get_translate_context(
     ui_messages = []
     for index, message in enumerate(messages):
         unpacked = unpack_message_text(message.text)
+        display_text = unpacked["text"]
+        display_translation = unpacked.get("translation")
+        if lang == "vn":
+            display_text, display_translation = resolve_bilingual_pair(
+                display_text,
+                display_translation,
+            )
         ui_messages.append(
             TranslateMessageItem(
                 id=message.message_id or index,
                 role=message_role(message, index),
-                text=unpacked["text"],
-                translation=unpacked.get("translation"),
+                text=display_text,
+                translation=display_translation or None,
                 note=unpacked.get("note"),
                 tags=unpacked.get("tags") or [],
                 time=format_message_time(message.created_at),
@@ -1533,9 +1655,16 @@ async def get_translate_context(
     listen_items = [item for item in ui_messages if item.role == "listen"]
     last_listen = listen_items[-1] if listen_items else None
     partner_text = last_listen.text if last_listen else ""
-    translation_text = (
-        (last_listen.translation or "") if last_listen else ""
-    ) or nuance or intent or ""
+    translation_text = ""
+    for item in reversed(ui_messages):
+        translated = (item.translation or "").strip()
+        if translated:
+            translation_text = translated
+            break
+
+    reply_suggestions = build_reply_suggestions_from_messages(messages)
+    if not reply_suggestions:
+        reply_suggestions = build_reply_suggestions(logs)
 
     return TranslateContextResponse(
         conversation_id=conversation_id,
@@ -1544,7 +1673,7 @@ async def get_translate_context(
         intent_analysis=intent,
         nuance_analysis=nuance,
         culture_explanation=culture,
-        reply_suggestions=build_reply_suggestions(logs),
+        reply_suggestions=reply_suggestions,
         partner_text=partner_text,
         translation_text=translation_text,
     )
@@ -1578,15 +1707,13 @@ def add_conversation_message(
         if message.message_id is None:
             raise HTTPException(status_code=500, detail="Could not save message")
 
-        unpacked = unpack_message_text(message.text)
-
         return TranslateMessageItem(
             id=message.message_id,
             role=body.role,
-            text=unpacked["text"],
-            translation=unpacked.get("translation"),
-            note=unpacked.get("note"),
-            tags=unpacked.get("tags") or [],
+            text=body.text.strip(),
+            translation=body.translation,
+            note=body.note,
+            tags=body.tags,
             time=format_message_time(message.created_at),
             is_marked=int(message.is_marked or 0),
         )

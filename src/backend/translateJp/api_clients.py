@@ -344,6 +344,44 @@ def translate_vietnamese_to_japanese(text: str, context: str = "") -> tuple[str,
     return translated_text, None
 
 
+def simplify_japanese_to_n45(text: str, context: str = "") -> tuple[str, str | None]:
+    """Rewrite Japanese text to N4/N5-friendly Japanese."""
+    if not text or not text.strip():
+        raise RuntimeError("Không có văn bản tiếng Nhật để đơn giản hóa")
+
+    api_key = _groq_api_key()
+    if not api_key:
+        # Keep original Japanese when Groq is unavailable.
+        return text.strip(), "Không có GROQ_API_KEY. Giữ nguyên câu tiếng Nhật gốc."
+
+    model = os.getenv("GROQ_TRANSLATION_MODEL", "llama-3.1-8b-instant").strip()
+    system_prompt = (
+        "Bạn là giáo viên tiếng Nhật. Hãy viết lại câu tiếng Nhật theo trình độ JLPT N4/N5, "
+        "dễ hiểu, tự nhiên, ngắn gọn. "
+        "BẮT BUỘC chỉ dùng tiếng Nhật (hiragana/katakana/kanji), không dùng romaji, "
+        "không giải thích, chỉ trả về 1 câu tiếng Nhật."
+    )
+    user_prompt = f"Câu tiếng Nhật gốc:\n{text.strip()}"
+    if context and context.strip():
+        user_prompt += f"\n\nNgữ cảnh:\n{context.strip()}"
+
+    try:
+        simplified = _groq_chat_translate(
+            api_key=api_key,
+            model=model,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=0.1,
+        )
+    except requests.HTTPError as exc:
+        raise RuntimeError(_groq_error_message(exc.response)) from exc
+
+    if _is_mostly_romaji(simplified):
+        raise RuntimeError("Kết quả đơn giản hóa không hợp lệ (romaji).")
+
+    return simplified, None
+
+
 def _parse_json_response(text: str) -> dict:
     try:
         return json.loads(text)

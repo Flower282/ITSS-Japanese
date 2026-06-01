@@ -7,6 +7,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from src.backend.translateJp.api_clients import (
+    simplify_japanese_to_n45,
     translate_japanese_to_vietnamese,
     translate_vietnamese_to_japanese,
 )
@@ -18,7 +19,10 @@ router = APIRouter()
 class TranslateTextRequest(BaseModel):
     text: str = Field(min_length=1)
     context: str = ""
-    direction: str = Field(default="ja-to-vi", pattern="^(ja-to-vi|vi-to-ja)$")
+    direction: str = Field(
+        default="ja-to-vi",
+        pattern="^(ja-to-vi|vi-to-ja|ja-to-ja-simple)$",
+    )
 
 
 @router.post("/audio")
@@ -26,6 +30,7 @@ class TranslateTextRequest(BaseModel):
 async def translate_audio(
     audio: UploadFile = File(...),
     context: str = Form(""),
+    direction: str = Form("ja-to-vi"),
 ) -> dict:
     service = VoiceTranslationService()
     suffix = os.path.splitext(audio.filename or "")[1] or ".wav"
@@ -35,7 +40,11 @@ async def translate_audio(
         tmp_path = tmp_file.name
 
     try:
-        result = service.process_audio_file(tmp_path, context=context)
+        result = service.process_audio_file(
+            tmp_path,
+            context=context,
+            direction=direction,
+        )
         return {
             "transcript": result.transcript,
             "translation": result.translation,
@@ -59,9 +68,14 @@ async def translate_text(body: TranslateTextRequest) -> dict:
             translation, warning = translate_japanese_to_vietnamese(
                 body.text, context=body.context
             )
-        else:
+        elif body.direction == "vi-to-ja":
             translation, warning = translate_vietnamese_to_japanese(
                 body.text, context=body.context
+            )
+        else:
+            translation, warning = simplify_japanese_to_n45(
+                body.text,
+                context=body.context,
             )
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

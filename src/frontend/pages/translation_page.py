@@ -3,6 +3,8 @@ from __future__ import annotations
 import base64
 from typing import Any
 
+import asyncio
+
 from nicegui import context, ui
 
 from src.core.i18n import _, get_user_language, nav, validate_language_or_default
@@ -74,6 +76,7 @@ def translation_page(conversation_id: int | None = None) -> None:
         "messages": [],
         "selected_tones": [_("tone_polite", lang)],
         "partner_recording": False,
+        "you_recording": False,
     }
 
   # UI refs (giữ nguyên khi cập nhật dữ liệu — không rebuild cả trang)
@@ -179,6 +182,7 @@ def translation_page(conversation_id: int | None = None) -> None:
                 messages=state["messages"],
                 max_height="560px",
                 on_mark=handle_mark_message,
+                lang=lang,
             )
 
     async def ensure_conversation_id() -> int | None:
@@ -393,11 +397,10 @@ def translation_page(conversation_id: int | None = None) -> None:
                 note=tone_note,
                 tags=tones,
             )
+            # Reload from API so "meaning/nuance" panel always follows backend output.
+            await reload_context()
             state["panels"]["partner"] = japanese
             state["panels"]["translation"] = vietnamese
-            state["panels"]["meaning"] = tone_note or ""
-            state["context"]["partner_text"] = japanese
-            state["context"]["translation_text"] = vietnamese
             update_panel_labels()
             with client:
                 inp.value = ""
@@ -407,6 +410,63 @@ def translation_page(conversation_id: int | None = None) -> None:
             toast(_("added_to_history", lang), type="positive")
         except Exception as exc:
             toast(f"Dịch thất bại: {exc}", type="negative")
+
+    async def handle_you_voice() -> None:
+        if state["lang"] != "jp":
+            return
+
+        if state["you_recording"]:
+            state["you_recording"] = False
+            result = await ui.run_javascript(
+                "return await stopRecordingToBase64()",
+                timeout=120.0,
+            )
+            if not result or not result.get("ok"):
+                toast((result or {}).get("error", "Ghi âm thất bại"), type="negative")
+                return
+
+            try:
+                toast("Đang xử lý giọng nói tiếng Nhật...", type="info")
+                audio_bytes = base64.b64decode(result["base64"])
+                data = await api_post_form(
+                    "/api/v1/translate/audio",
+                    {"context": tone_context(), "direction": "ja-to-vi"},
+                    {
+                        "audio": (
+                            result.get("filename", "record.webm"),
+                            audio_bytes,
+                            result.get("mimeType", "audio/webm"),
+                        )
+                    },
+                )
+                japanese_raw = (data.get("transcript") or "").strip()
+                if not japanese_raw:
+                    toast("Không nhận diện được tiếng Nhật từ audio", type="warning")
+                    return
+
+                simplified = await translate_text(
+                    japanese_raw,
+                    context=tone_context(),
+                    direction="ja-to-ja-simple",
+                )
+                japanese_n45 = (simplified.get("translation") or "").strip() or japanese_raw
+                with client:
+                    inp = refs.get("draft_input")
+                    if inp:
+                        inp.value = japanese_n45
+                warning = simplified.get("warning")
+                if warning:
+                    toast(str(warning), type="warning")
+                toast("Đã đưa câu tiếng Nhật N4/N5 vào ô nhập", type="positive")
+            except Exception as exc:
+                toast(f"Ghi âm tiếng Nhật thất bại: {exc}", type="negative")
+        else:
+            init = await ui.run_javascript("return await startRecording()")
+            if not init or not init.get("ok"):
+                toast((init or {}).get("error", "Không thể truy cập micro"), type="negative")
+                return
+            state["you_recording"] = True
+            toast("Đang ghi âm tiếng Nhật cho phần Bạn muốn nói gì...", type="info")
 
     async def handle_partner_voice() -> None:
         if state["partner_recording"]:
@@ -493,12 +553,11 @@ def translation_page(conversation_id: int | None = None) -> None:
             toast(str(exc), type="negative")
 
     async def handle_language_change(new_lang: str) -> None:
-        state["lang"] = validate_language_or_default(new_lang)
-        state["selected_tones"] = [_("tone_polite", state["lang"])]
-        try:
-            await reload_context()
-        except Exception as exc:
-            toast(str(exc), type="negative")
+        target_lang = validate_language_or_default(new_lang)
+        conv_id = state.get("conversation_id")
+        target_path = f"/translate/{conv_id}" if conv_id else "/translate"
+        with client:
+            ui.navigate.to(nav(target_path, target_lang))
 
     def title_slot() -> None:
         with ui.row().classes("items-center gap-2 w-full"):
@@ -530,7 +589,7 @@ def translation_page(conversation_id: int | None = None) -> None:
         title_slot=title_slot,
         search_history=state["search_history"],
         on_search=handle_search,
-        on_locale_change=handle_language_change,
+        on_locale_change=lambda value: asyncio.create_task(handle_language_change(value)),
         on_logo_click=lambda: ui.navigate.to(nav("/", lang)),
         top_bar_actions=[
             {
@@ -604,6 +663,12 @@ def translation_page(conversation_id: int | None = None) -> None:
                             placeholder=_("input_placeholder", lang),
                             value="",
                         )
+                        if lang == "jp":
+                            with ui.row().classes("w-full justify-end"):
+                                ui.button(icon="mic").props("flat round").on(
+                                    "click",
+                                    handle_you_voice,
+                                )
                         with ui.element("div").classes(
                             "w-full rounded-2xl border border-slate-100 bg-white p-4"
                         ):
