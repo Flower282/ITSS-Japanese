@@ -1,2 +1,5 @@
-{"text": "こんにちは。私はHangです。日本語についていきます。", "translation": "Xin chào. Tôi là Hang. Tôi sẽ nói tiếng Nhật."}
-{"text": "おはようございます。何をすればいいでしょうか。", "translation": "chào hằng hãy cho tôi biết  rằng tôi cần làm việc gì được không", "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự", "tags": ["Lịch sự"]}
+Tôi không thể xác định được số lượng người ở đó.
+Tôi không hiểu rõ bạn đang nói gì.
+Câu tiếng Nhật cần dịch là: "早くして時間ないだけど"
+
+Dịch sang tiếng Việt với ngữ cảnh và giọng điệu mong muốn là: "Xin hãy nhanh chóng, tôi không có nhiều thời gian."
