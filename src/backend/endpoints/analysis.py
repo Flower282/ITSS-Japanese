@@ -1527,9 +1527,7 @@ def create_conversation(
     from src.models.models import User
 
     with Session(engine) as session:
-        user = session.exec(select(User)).first()
-        sample = session.exec(select(AnalysisConversation).limit(1)).first()
-        user_id = user.id if user else (sample.user_id if sample else 1)
+        user_id = 4
 
         conversation = AnalysisConversation(
             user_id=user_id,
@@ -1686,14 +1684,9 @@ def add_conversation_message(
 ) -> TranslateMessageItem:
     with Session(engine) as session:
         get_conversation_or_404(session, conversation_id)
-        user_id = 1 if body.role == "you" else None
+        user_id = 4 if body.role == "you" else None
 
-        stored_text = pack_message_text(
-            body.text,
-            translation=body.translation,
-            note=body.note,
-            tags=body.tags,
-        )
+        stored_text = body.text.strip()
         message = AnalysisMessage(
             conversation_id=conversation_id,
             user_id=user_id,
