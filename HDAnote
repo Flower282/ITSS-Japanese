@@ -1,0 +1,101 @@
+Ran command: `python app.py `
+Viewed translation_page.py:1-699
+Viewed voice_recorder.py:1-58
+Searched for "/translate/audio"
+Listed directory ITSS-Japanese
+Listed directory src
+Listed directory backend
+Listed directory endpoints
+Viewed translate_routes.py:1-87
+Listed directory translateJp
+Viewed service.py:1-115
+Viewed api_clients.py:1-475
+Listed directory services
+Viewed conversation_service.py:1-124
+Searched for "messages"
+Searched for "/messages"
+Viewed analysis.py:1107-1906
+
+Quy trình hoạt động khi bạn bấm vào nút **Micro** trên trang dịch thuật (`translation_page.py`) được chia thành 3 giai đoạn chính: **Frontend (Client-side)**, **Backend (Server-side)** và **Database (Lưu trữ)**. 
+
+Dưới đây là chi tiết workflow hoạt động của hệ thống:
+
+---
+
+### Giai đoạn 1: Xử lý tại Frontend (`src/frontend/pages/translation_page.py`)
+
+Giao diện hỗ trợ hai chức năng ghi âm: **Ghi âm giọng của đối phương** (`handle_partner_voice`) và **Ghi âm giọng của bạn** (`handle_you_voice` - chỉ khả dụng khi ngôn ngữ hệ thống là tiếng Nhật `jp`).
+
+1. **Bấm Micro lần 1 (Bắt đầu ghi âm):**
+   - Frontend kích hoạt script JavaScript [voice_recorder.py](file:///c:/Users/Admin/GIT/ITSS-Japanese/src/frontend/services/voice_recorder.py) bằng câu lệnh:
+     ```python
+     init = await ui.run_javascript("return await startRecording()")
+     ```
+   - Trình duyệt sẽ gọi API `navigator.mediaDevices.getUserMedia({ audio: true })` để yêu cầu quyền truy cập micro của người dùng.
+   - Khi được cấp quyền, trình duyệt tạo đối tượng `MediaRecorder`, bắt đầu ghi (`mediaRecorder.start()`) và thu thập các mẩu âm thanh (audio chunks) lưu tạm vào biến global `window.voiceRecorder.chunks`.
+   - Trạng thái UI được cập nhật sang `"Đang ghi âm..."`.
+
+2. **Bấm Micro lần 2 (Dừng ghi âm & Gửi dữ liệu):**
+   - Frontend gửi lệnh JavaScript để dừng ghi âm và mã hóa âm thanh sang Base64:
+     ```python
+     result = await ui.run_javascript("return await stopRecordingToBase64()", timeout=120.0)
+     ```
+   - Trình duyệt thực hiện `mediaRecorder.stop()`, gom các chunks âm thanh thu được thành một đối tượng `Blob` (mặc định là định dạng `audio/webm`), chuyển đổi thành chuỗi **Base64** qua `FileReader`, sau đó đóng stream kết nối micro để giải phóng thiết bị.
+   - Tại Python, chuỗi Base64 này được giải mã thành dữ liệu nhị phân (bytes):
+     ```python
+     audio_bytes = base64.b64decode(result["base64"])
+     ```
+   - Gửi yêu cầu HTTP POST dạng `multipart/form-data` đến API Backend `/api/v1/translate/audio` bằng client `api_post_form`.
+
+---
+
+### Giai đoạn 2: Xử lý tại Backend (`src/backend/endpoints/translate_routes.py`)
+
+Khi endpoint `@router.post("/audio")` nhận được file âm thanh:
+
+1. **Lưu file âm thanh tạm thời:**
+   - Dữ liệu nhị phân của audio được ghi tạm xuống đĩa cứng bằng `tempfile.NamedTemporaryFile` để xử lý.
+2. **Khử nhiễu và Speech-To-Text (STT):**
+   - Lớp [service.py](file:///c:/Users/Admin/GIT/ITSS-Japanese/src/backend/translateJp/service.py) sẽ xử lý file thông qua `VoiceTranslationService.process_audio_file`:
+     - **Khử nhiễu:** Gọi `reduce_noise_file` từ `audio_utils.py` để lọc bớt tạp âm môi trường nhằm tăng độ chính xác khi nhận diện.
+     - **Chuyển giọng nói thành văn bản (STT):** Gửi file âm thanh đã lọc nhiễu lên **Groq Whisper API** (model `whisper-large-v3`) thông qua hàm `speech_to_text()` tại [api_clients.py](file:///c:/Users/Admin/GIT/ITSS-Japanese/src/backend/translateJp/api_clients.py) để lấy văn bản gốc tiếng Nhật/tiếng Việt (`transcript`).
+3. **Dịch thuật bằng AI:**
+   - Sử dụng Groq API (mặc định model `llama-3.1-8b-instant`) để thực hiện dịch:
+     - Nếu hướng dịch là **Nhật - Việt (`ja-to-vi`)**: Dịch văn bản tiếng Nhật sang tiếng Việt tự nhiên và giữ đúng ngữ cảnh thông qua `translate_japanese_to_vietnamese()`.
+     - Nếu hướng dịch là **Việt - Nhật (`vi-to-ja`)**: Dịch sang tiếng Nhật chuẩn qua `translate_vietnamese_to_japanese()` (bắt buộc dùng bảng chữ cái Nhật, loại bỏ Romaji).
+     - *Riêng phần bạn nói*: Chạy thêm hàm đơn giản hóa câu tiếng Nhật về trình độ N4/N5 (`simplify_japanese_to_n45()`).
+4. **Trả kết quả về Frontend:**
+   - Trả về JSON chứa `transcript` (văn bản gốc nhận diện được) và `translation` (bản dịch). File tạm trên ổ cứng sẽ bị xóa hoàn toàn ở khối `finally`.
+
+---
+
+### Giai đoạn 3: Lưu trữ vào Cơ sở dữ liệu (Database)
+
+Quy trình lưu trữ vào cơ sở dữ liệu sẽ khác nhau tùy thuộc vào đối tượng đang nói:
+
+1. **Khi đối phương nói (`handle_partner_voice`):**
+   - Bản gốc và bản dịch tự động được lưu thẳng vào database ngay lập tức thông qua hàm:
+     ```python
+     await append_message(transcript, role="listen", translation=translation)
+     ```
+   - `append_message` gửi một yêu cầu HTTP POST JSON đến endpoint `/api/analysis/{conversation_id}/messages` của backend.
+   - Tại Backend (`add_conversation_message` ở [analysis.py](file:///c:/Users/Admin/GIT/ITSS-Japanese/src/backend/endpoints/analysis.py)):
+     - Phân loại vai trò (`role == "you"` thì `user_id = 1`, ngược lại nếu đối phương nói `role == "listen"` thì `user_id = None`).
+     - Đóng gói (serialize) nội dung văn bản gốc, bản dịch, note, và tags thành chuỗi JSON qua hàm `pack_message_text()`.
+     - Sử dụng **SQLModel** tạo một bản ghi `AnalysisMessage` mới và lưu trực tiếp vào database:
+       ```python
+       message = AnalysisMessage(
+           conversation_id=conversation_id,
+           user_id=user_id,
+           text=stored_text,
+           created_at=datetime.utcnow(),
+       )
+       session.add(message)
+       session.commit()
+       ```
+
+2. **Khi bạn nói (`handle_you_voice`):**
+   - Phiên bản tiếng Nhật N4/N5 sau khi nhận diện và tối giản hóa sẽ chỉ được đưa tạm thời vào ô nhập liệu (`refs["draft_input"]`) để bạn có thể xem lại và chỉnh sửa trước.
+   - Khi bạn nhấn nút **Dịch & Tối ưu** (`handle_translate`), hệ thống mới tiến hành gọi `append_message()` để ghi nhận cuộc trò chuyện đó vào Database dưới vai trò là `"you"` (`user_id = 1`).
+
+Cuối cùng, sau khi API phản hồi lưu thành công, Frontend sẽ đưa tin nhắn mới vào danh sách hiển thị và gọi `render_history()` để cập nhật khung chat tức thì mà không cần phải tải lại trang.
