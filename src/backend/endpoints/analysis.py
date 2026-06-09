@@ -1660,9 +1660,9 @@ async def get_translate_context(
             translation_text = translated
             break
 
-    reply_suggestions = build_reply_suggestions_from_messages(messages)
+    reply_suggestions = build_reply_suggestions(logs)
     if not reply_suggestions:
-        reply_suggestions = build_reply_suggestions(logs)
+        reply_suggestions = build_reply_suggestions_from_messages(messages)
 
     return TranslateContextResponse(
         conversation_id=conversation_id,
