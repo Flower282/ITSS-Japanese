@@ -324,18 +324,19 @@ Yêu cầu:
         return _('ai_culture_insight', lang)
 
 
-def get_user_learning_roadmap(db: Session, user_id: int = 4) -> str:
+def get_user_learning_roadmap(db: Session, user_id: int = 4, force_refresh: bool = False) -> str:
     """
     Fetch or generate a personalized markdown learning roadmap specifically for a user (defaults to user_id=4).
     Saves and caches the generated roadmap in the `learning_route` table.
     """
     # 1. Check if already cached in DB table `learning_route`
-    cached_route = db.query(LearningRoute).filter(
-        LearningRoute.user_id == user_id
-    ).order_by(LearningRoute.created_at.desc()).first()
-    
-    if cached_route and cached_route.route_text:
-        return cached_route.route_text
+    if not force_refresh:
+        cached_route = db.query(LearningRoute).filter(
+            LearningRoute.user_id == user_id
+        ).order_by(LearningRoute.created_at.desc()).first()
+        
+        if cached_route and cached_route.route_text:
+            return cached_route.route_text
 
     # 2. Fetch all messages written by this user
     messages = db.query(AnalysisMessage).filter(

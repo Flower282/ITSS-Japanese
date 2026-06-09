@@ -1,1 +1,11 @@
-Người này là một kẻ rất đáng ghét.
+Tôi không thể xác định được số lượng người ở đó.
+Tôi không hiểu rõ bạn đang nói gì.
+Câu tiếng Nhật cần dịch là: "早くして時間ないだけど"
+
+Dịch sang tiếng Việt với ngữ cảnh và giọng điệu mong muốn là: "Xin hãy nhanh chóng, tôi không có nhiều thời gian."
+Cảm ơn bạn đã xem chương trình.
+Cảm ơn đã xem chương trình.
+Xin lỗi, tôi không hiểu rõ.
+{"content": "tôi sẽ giải thích lại", "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự", "tags": ["Lịch sự"]}
+何言ってんのかわからなくてもかつく
+すみません、また説明します

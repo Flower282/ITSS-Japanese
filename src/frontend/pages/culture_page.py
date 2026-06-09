@@ -447,7 +447,8 @@ def culture_page() -> None:
         roadmap_loading = False
         render_roadmap_content.refresh()
 
-    async def load_culture_data() -> None:
+    async def load_culture_data(force_refresh: bool = False) -> None:
+        nonlocal roadmap_text, roadmap_loading
         page_state["loading"] = True
         shell.refresh()
         try:
@@ -456,10 +457,13 @@ def culture_page() -> None:
             def fetch_db():
                 with get_db_context() as db:
                     scenarios_data = get_marked_messages_with_analysis(db)
-                    insight_text = get_culture_assistant_insight(db, lang)
-                    return scenarios_data, insight_text
+                    insight_text = get_culture_assistant_insight(db, lang, force_refresh=force_refresh)
+                    r_text = None
+                    if force_refresh:
+                        r_text = get_user_learning_roadmap(db, user_id=4, force_refresh=True)
+                    return scenarios_data, insight_text, r_text
 
-            marked_scenarios_data, ai_insight_text = await asyncio.to_thread(fetch_db)
+            marked_scenarios_data, ai_insight_text, r_text = await asyncio.to_thread(fetch_db)
             
             if lang == 'jp':
                 handbook_items = [
@@ -644,6 +648,10 @@ def culture_page() -> None:
             page_state["culture_insight"] = ai_insight_text or _('ai_culture_insight', lang)
             page_state["handbook_items"] = handbook_items
             page_state["scenarios"] = scenarios[::-1]
+            if force_refresh and r_text:
+                roadmap_text = r_text
+                roadmap_loading = False
+                render_roadmap_content.refresh()
         except Exception as exc:
             print(f"Error loading culture data: {exc}")
             page_state["culture_insight"] = _('ai_culture_insight', lang)
@@ -653,7 +661,7 @@ def culture_page() -> None:
         shell.refresh()
 
     async def handle_sync() -> None:
-        await load_culture_data()
+        await load_culture_data(force_refresh=True)
         ui.notify(_('updated_from_conv', lang), type="positive")
 
     def handle_search(value: str) -> None:
