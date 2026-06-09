@@ -31,6 +31,14 @@ from src.models.analysis_models import (
     AnalysisLog,
     AnalysisMessage,
 )
+from src.db.cache_manager import (
+    get_cached_conversations_list,
+    set_cached_conversations_list,
+    get_cached_translate_context,
+    set_cached_translate_context,
+    invalidate_conversation,
+    invalidate_all,
+)
 
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -1500,6 +1508,10 @@ def build_dashboard_insights(
 def list_conversations(
     limit: int = Query(default=30, ge=1, le=100),
 ) -> list[ConversationListItem]:
+    cached = get_cached_conversations_list()
+    if cached is not None:
+        return [ConversationListItem(**item) for item in cached[:limit]]
+
     with Session(engine) as session:
         conversations = session.exec(
             select(AnalysisConversation)
@@ -1507,7 +1519,7 @@ def list_conversations(
             .limit(limit)
         ).all()
 
-        return [
+        result = [
             ConversationListItem(
                 id=conversation.conversation_id,
                 label=conversation.conversation_name,
@@ -1518,6 +1530,17 @@ def list_conversations(
             for conversation in conversations
             if conversation.conversation_id is not None
         ]
+
+        set_cached_conversations_list([
+            {
+                "id": item.id,
+                "label": item.label,
+                "subtitle": item.subtitle,
+            }
+            for item in result
+        ])
+
+        return result
 
 
 @router.post("/conversations", response_model=ConversationListItem)
@@ -1541,6 +1564,8 @@ def create_conversation(
         if conversation.conversation_id is None:
             raise HTTPException(status_code=500, detail="Could not create conversation")
 
+        invalidate_conversation(conversation.conversation_id)
+
         return ConversationListItem(
             id=conversation.conversation_id,
             label=conversation.conversation_name,
@@ -1561,6 +1586,8 @@ def update_conversation(
         session.add(conversation)
         session.commit()
         session.refresh(conversation)
+
+        invalidate_conversation(conversation_id)
 
         return ConversationListItem(
             id=conversation.conversation_id,
@@ -1611,6 +1638,10 @@ async def get_translate_context(
     conversation_id: int,
     lang: str = Query(default="vn", pattern="^(vn|jp)$"),
 ) -> TranslateContextResponse:
+    cached = get_cached_translate_context(conversation_id, lang)
+    if cached is not None:
+        return TranslateContextResponse(**cached)
+
     with Session(engine) as session:
         conversation = get_conversation_or_404(session, conversation_id)
         messages = get_messages_by_conversation(session, conversation_id)
@@ -1664,7 +1695,7 @@ async def get_translate_context(
     if not reply_suggestions:
         reply_suggestions = build_reply_suggestions_from_messages(messages)
 
-    return TranslateContextResponse(
+    response_data = TranslateContextResponse(
         conversation_id=conversation_id,
         conversation_name=conversation.conversation_name,
         messages=ui_messages,
@@ -1675,6 +1706,14 @@ async def get_translate_context(
         partner_text=partner_text,
         translation_text=translation_text,
     )
+
+    try:
+        cached_dict = response_data.model_dump()
+    except AttributeError:
+        cached_dict = response_data.dict()
+    set_cached_translate_context(conversation_id, lang, cached_dict)
+
+    return response_data
 
 
 @router.post("/{conversation_id}/messages", response_model=TranslateMessageItem)
@@ -1700,6 +1739,8 @@ def add_conversation_message(
         if message.message_id is None:
             raise HTTPException(status_code=500, detail="Could not save message")
 
+        invalidate_conversation(conversation_id)
+
         return TranslateMessageItem(
             id=message.message_id,
             role=body.role,
@@ -1719,6 +1760,9 @@ def mark_conversation_message(message_id: int) -> MarkMessageResponse:
         message = message_repo.mark_message(session, message_id=message_id)
     if message.message_id is None:
         raise HTTPException(status_code=500, detail="Could not mark message")
+
+    invalidate_conversation(message.conversation_id)
+
     return MarkMessageResponse(
         id=message.message_id,
         is_marked=int(message.is_marked or 0),
@@ -1808,6 +1852,8 @@ async def run_conversation_analysis(
             messages=messages,
             logs=logs,
         )
+
+        invalidate_conversation(conversation_id)
 
         return AnalysisRunResponse(
             conversation_id=conversation.conversation_id,
