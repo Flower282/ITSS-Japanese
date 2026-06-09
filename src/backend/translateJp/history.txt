@@ -1,3 +1,4 @@
-{"text": "はい、わかりました。", "translation": "Tôi hiểu rồi. Dưới đây là bản dịch tiếng Việt:\n\nĐúng, tôi hiểu."}
-{"text": "Tôi đề nghị bạn làm như vậy.", "translation": "tôi bt bạn sẽ làm như thế", "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự", "tags": ["Lịch sự"]}
-{"text": "確認のための書面による確認を取り入れて、誤解を避けるために、任務と期限を再確認する。\n\n（注：この文は、正式な文書やメールの内容として使用することを想定しています。）", "translation": "Xác nhận lại bằng văn bản về nhiệm vụ và deadline để tránh hiểu lầm.", "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự", "tags": ["Lịch sự"]}
+じゃあさっきやったことを説明してみろ
+すみません、説明します
+本当に下手すぎて何言ってるか全然わからない
+すみません、具体的に何について説明したいのでしょうか。

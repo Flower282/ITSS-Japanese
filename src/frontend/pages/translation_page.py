@@ -203,6 +203,7 @@ def translation_page(conversation_id: int | None = None) -> None:
             state["messages"] = []
             sync_panels_from_context()
             render_history()
+            refresh_sidebar()
             return
         ctx = await load_translate_context(int(conv_id), lang)
         state["context"] = ctx
@@ -213,6 +214,7 @@ def translation_page(conversation_id: int | None = None) -> None:
         set_title_value(ctx.get("conversation_name", ""))
         sync_panels_from_context()
         render_history()
+        refresh_sidebar()
 
     def refresh_sidebar() -> None:
         with client:
@@ -317,9 +319,10 @@ def translation_page(conversation_id: int | None = None) -> None:
             toast(_("empty_input_warn", lang), type="warning")
             return
         try:
-            await ensure_conversation_id()
+            conv_id = await ensure_conversation_id()
+            if conv_id is not None:
+                layout_state.selected_history_id = conv_id
             await sync_history_from_db()
-            layout_state.selected_history_id = state["conversation_id"]
             toast(_("save_conv", lang), type="positive")
         except Exception as exc:
             toast(str(exc), type="negative")
