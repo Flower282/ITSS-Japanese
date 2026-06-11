@@ -543,9 +543,321 @@
       "reply_suggestions": [],
       "partner_text": "",
       "translation_text": ""
+    },
+    "46_vn": {
+      "conversation_id": 46,
+      "conversation_name": "Hội thoại siêu cấp của HDA",
+      "messages": [
+        {
+          "id": 211,
+          "role": "listen",
+          "text": "じゃあさっきやったことを説明してみろ",
+          "time": "14:51",
+          "translation": "Hãy giải thích lại điều đó mà tôi đã làm trước đó.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 212,
+          "role": "you",
+          "text": "すみません、説明します",
+          "time": "14:51",
+          "translation": "Xin lỗi, tôi sẽ giải thích.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 213,
+          "role": "listen",
+          "text": "本当に下手すぎて何言ってるか全然わからない",
+          "time": "15:07",
+          "translation": "Thật sự quá tệ đến mức không hiểu được mình đang nói gì.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 214,
+          "role": "you",
+          "text": "すみません、具体的に何について説明したいのでしょうか。",
+          "time": "15:08",
+          "translation": "Xin lỗi, cụ thể là về vấn đề gì bạn muốn tôi giải thích?",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 220,
+          "role": "listen",
+          "text": "エトー・デ・クアンサン",
+          "time": "05:43",
+          "translation": "Étô de Quan Thanh",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 221,
+          "role": "you",
+          "text": "アインさん、何をしている?",
+          "time": "05:44",
+          "translation": "Anh AIN đang làm gì?",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 226,
+          "role": "listen",
+          "text": "すみません、アンさん説明してください",
+          "time": "00:36",
+          "translation": "Xin lỗi, bạn có thể giải thích cho tôi không?",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        }
+      ],
+      "intent_analysis": "Câu nói của đối tác 'アインさん、何をしている?' thực sự là một câu hỏi về tiến độ công việc, muốn biết bạn đang làm gì và có tiến triển như thế nào. Mặc dù câu nói có vẻ lịch sự và gián tiếp, nhưng ý định thực tế đằng sau đó là muốn biết thông tin về thời gian và tiến độ của dự án.",
+      "nuance_analysis": "Sắc thái giao tiếp trong cuộc hội thoại này chủ yếu là lịch sự và rõ ràng, ít có nguy cơ hiểu lầm.",
+      "culture_explanation": "Không có yếu tố văn hóa/giao tiếp Việt - Nhật liên quan trực tiếp trong cuộc hội thoại này.",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Bạn có thể phản hồi bằng cách nói rõ ràng về tiến độ công việc, chẳng hạn như 'T",
+          "description": "Bạn có thể phản hồi bằng cách nói rõ ràng về tiến độ công việc, chẳng hạn như 'Tôi đang hoàn thành nhiệm vụ này, dự kiến sẽ hoàn thành trong vòng 2 giờ.' hoặc 'Tôi đang gặp một số khó khăn, nhưng tôi sẽ cố gắng hoàn thành sớm hơn dự kiến.'"
+        }
+      ],
+      "partner_text": "すみません、アンさん説明してください",
+      "translation_text": "Xin lỗi, bạn có thể giải thích cho tôi không?"
+    },
+    "44_vn": {
+      "conversation_id": 44,
+      "conversation_name": "Test with pot team",
+      "messages": [
+        {
+          "id": 199,
+          "role": "listen",
+          "text": "そこにいる人数を数えられません。",
+          "time": "04:02",
+          "translation": "Tôi không thể xác định được số lượng người ở đó.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 200,
+          "role": "you",
+          "text": "何を言っているのかわかりません。",
+          "time": "04:03",
+          "translation": "Tôi không hiểu rõ bạn đang nói gì.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 201,
+          "role": "listen",
+          "text": "時間がないので急いでください",
+          "time": "04:06",
+          "translation": "Câu tiếng Nhật cần dịch là: \"早くして時間ないだけど\"\n\nDịch sang tiếng Việt với ngữ cảnh và giọng điệu mong muốn là: \"Xin hãy nhanh chóng, tôi không có nhiều thời gian.\"",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 202,
+          "role": "you",
+          "text": "どういたしまして。",
+          "time": "14:08",
+          "translation": "Cảm ơn bạn đã xem chương trình.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 203,
+          "role": "listen",
+          "text": "どういたしまして。",
+          "time": "14:09",
+          "translation": "Cảm ơn đã xem chương trình.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 204,
+          "role": "you",
+          "text": "すみません、分かりません。",
+          "time": "14:09",
+          "translation": "Xin lỗi, tôi không hiểu rõ.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 205,
+          "role": "you",
+          "text": "私がまた説明します",
+          "time": "14:19",
+          "translation": "tôi sẽ giải thích lại",
+          "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự",
+          "tags": [
+            "Lịch sự"
+          ],
+          "is_marked": 0
+        },
+        {
+          "id": 206,
+          "role": "you",
+          "text": "何言ってんのかわからなくてもかつく",
+          "time": "14:37",
+          "translation": "Tôi không thấy câu tiếng Nhật cần dịch. Vui lòng cung cấp câu tiếng Nhật cần dịch.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 207,
+          "role": "you",
+          "text": "すみません、また説明します",
+          "time": "14:38",
+          "translation": "Xin lỗi, tôi sẽ giải thích lại.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 229,
+          "role": "you",
+          "text": "なに?これ?えっと",
+          "time": "08:17",
+          "translation": "Câu tiếng Nhật cần dịch là: \"Này? Đây? Ồ, ừ...\"",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 230,
+          "role": "listen",
+          "text": "すみません、また説明します。",
+          "time": "08:18",
+          "translation": "Xin lỗi, tôi sẽ giải thích lại.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        }
+      ],
+      "intent_analysis": "Câu nói 'Xin lỗi, tôi không hiểu rõ' của đối tác có thể ẩn ý rằng họ đang gặp khó khăn trong việc hiểu rõ yêu cầu hoặc thông tin được cung cấp. Điều này có thể là do sự khác biệt về ngôn ngữ, văn hóa hoặc kiến thức chuyên môn. Đối tác có thể đang cố gắng tránh việc nói thẳng ra rằng họ không hiểu rõ, mà thay vào đó đang tìm cách thể hiện sự tôn trọng và lịch sự.",
+      "nuance_analysis": "Sắc thái giao tiếp trong cuộc hội thoại này có thể được coi là lịch sự, nhưng có một số điểm cần lưu ý. Phía Việt Nam có thể hiểu rằng phía Nhật Bản đang yêu cầu thông tin về số lượng người ở địa điểm cụ thể, nhưng phía Nhật Bản có thể hiểu rằng phía Việt Nam đang gặp khó khăn trong việc cung cấp thông tin này. Để giảm hiểu lầm, phía Việt Nam nên hỏi lại về thông tin cần thiết và phía Nhật Bản nên cung cấp thông tin rõ ràng.",
+      "culture_explanation": "Trong văn hóa Nhật Bản, người ta thường sử dụng ngôn ngữ lịch sự và tránh từ chối thẳng. Trong cuộc hội thoại này, phía Nhật Bản đã sử dụng ngôn ngữ lịch sự khi nói 'Xin hãy nhanh chóng, tôi không có nhiều thời gian.' Điều này cho thấy rằng phía Nhật Bản đang cố gắng tránh gây khó chịu cho phía Việt Nam.",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Phản hồi khéo léo có thể là: 'Không sao, tôi sẵn sàng giải thích lại hoặc cung c",
+          "description": "Phản hồi khéo léo có thể là: 'Không sao, tôi sẵn sàng giải thích lại hoặc cung cấp thêm thông tin để giúp bạn hiểu rõ hơn.' hoặc 'Tôi hiểu rằng có thể có sự khác biệt về ngôn ngữ, hãy cho tôi biết nếu bạn cần thêm sự giúp đỡ.'"
+        }
+      ],
+      "partner_text": "すみません、また説明します。",
+      "translation_text": "Xin lỗi, tôi sẽ giải thích lại."
+    },
+    "19_vn": {
+      "conversation_id": 19,
+      "conversation_name": "Cuộc hội thoại mới",
+      "messages": [
+        {
+          "id": 117,
+          "role": "listen",
+          "text": "えっと、今週のことなんですが…この企画書、来週までにお願いできますでしょうか。",
+          "time": "10:48",
+          "translation": "À, về deadline tuần này… bạn có thể nộp bản kế hoạch trước tuần sau được không?",
+          "note": "Đối tác đang gặp khó khăn với deadline và muốn nhờ bạn hỗ trợ nhanh.",
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 119,
+          "role": "you",
+          "text": "承知いたしました。優先順位を確認して、可能な限り早めに仕上げます。",
+          "time": "10:48",
+          "translation": "Dạ, em hiểu ạ. Em sẽ sắp xếp lại ưu tiên và cố gắng hoàn thành sớm nhất có thể.",
+          "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự, Tôn trọng",
+          "tags": [
+            "Lịch sự",
+            "Tôn trọng"
+          ],
+          "is_marked": 0
+        }
+      ],
+      "intent_analysis": "Mục tiêu chính của cuộc hội thoại là xin deadline trước tuần sau để nộp bản kế hoạch.",
+      "nuance_analysis": "Sắc thái giao tiếp của đối tác Nhật Bản lịch sự và tôn trọng, nhưng có thể có nguy cơ hiểu lầm về deadline.",
+      "culture_explanation": "Yếu tố văn hóa liên quan trong hội thoại này là tôn trọng và lịch sự. Đối tác Nhật Bản sử dụng từ ngữ lịch sự và tôn trọng để thể hiện sự tôn trọng.",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Phía Việt Nam nên xác nhận rõ ràng về deadline và khả năng nộp sớm hơn.",
+          "description": "Phía Việt Nam nên xác nhận rõ ràng về deadline và khả năng nộp sớm hơn."
+        },
+        {
+          "id": "s2",
+          "title": "Phía Việt Nam nên gửi email tóm tắt về deadline và tiến độ để tránh hiểu lầm.",
+          "description": "Phía Việt Nam nên gửi email tóm tắt về deadline và tiến độ để tránh hiểu lầm."
+        }
+      ],
+      "partner_text": "えっと、今週のことなんですが…この企画書、来週までにお願いできますでしょうか。",
+      "translation_text": "Dạ, em hiểu ạ. Em sẽ sắp xếp lại ưu tiên và cố gắng hoàn thành sớm nhất có thể."
+    },
+    "49_vn": {
+      "conversation_id": 49,
+      "conversation_name": "Cuộc hội thoại mới",
+      "messages": [
+        {
+          "id": 231,
+          "role": "you",
+          "text": "次の報告について少し話したい",
+          "time": "08:21",
+          "translation": "Tôi muốn nói về báo cáo tiếp theo một chút.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 232,
+          "role": "you",
+          "text": "次回の報告について少し話したいと思います。",
+          "time": "08:21",
+          "translation": "Tôi muốn nói một chút về báo cáo lần sau.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        }
+      ],
+      "intent_analysis": "Mục tiêu chính của cuộc hội thoại là thảo luận về báo cáo tiếp theo",
+      "nuance_analysis": "Sắc thái giao tiếp trong cuộc hội thoại này chủ yếu là lịch sự và rõ ràng, ít hàm ý và nguy cơ hiểu lầm",
+      "culture_explanation": "Không có yếu tố văn hóa/giao tiếp Việt - Nhật liên quan trực tiếp trong cuộc hội thoại này",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Xác nhận lại deadline và phạm vi của báo cáo tiếp theo",
+          "description": "Xác nhận lại deadline và phạm vi của báo cáo tiếp theo"
+        },
+        {
+          "id": "s2",
+          "title": "Gửi email tóm tắt về nội dung đã thảo luận",
+          "description": "Gửi email tóm tắt về nội dung đã thảo luận"
+        }
+      ],
+      "partner_text": "",
+      "translation_text": "Tôi muốn nói một chút về báo cáo lần sau."
     }
   },
   "conversations_list": [
+    {
+      "id": 49,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "11/06/2026"
+    },
     {
       "id": 48,
       "label": "新しい会話",
@@ -688,11 +1000,6 @@
     },
     {
       "id": 20,
-      "label": "Cuộc hội thoại mới",
-      "subtitle": "24/05/2026"
-    },
-    {
-      "id": 19,
       "label": "Cuộc hội thoại mới",
       "subtitle": "24/05/2026"
     }

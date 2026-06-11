@@ -10,7 +10,10 @@ from nicegui import ui
 
 from src.frontend.api_client import api_get
 from src.frontend.components.components import action_button
-from src.frontend.services.conversation_service import load_conversation_history
+from src.frontend.services.conversation_service import (
+    load_conversation_history,
+    load_translate_context,
+)
 from src.frontend.layouts.layout import base_layout
 from src.frontend.ui_state import UiState
 from src.core.i18n import _, get_user_language, validate_language_or_default, nav
@@ -177,20 +180,35 @@ def normalize_gap(gap: dict[str, Any], lang: str) -> dict[str, Any]:
 
 
 def normalize_analysis_payload(data: dict[str, Any], lang: str) -> dict[str, Any]:
+    duration_mins = data.get("duration_minutes")
+    if duration_mins is not None:
+        try:
+            val_num = float(duration_mins)
+            duration_val = f"{int(val_num)}" if val_num % 1 == 0 else f"{val_num}"
+        except (ValueError, TypeError):
+            duration_val = str(duration_mins)
+    else:
+        duration_val = "0"
+
+    raw_metrics = data.get("metrics") or []
+    normalized_metrics = []
+    for metric in raw_metrics:
+        if isinstance(metric, dict):
+            norm_m = normalize_metric(metric, lang)
+            if norm_m.get("title") in {"THỜI LƯỢNG", "時間"}:
+                norm_m["value"] = duration_val
+            normalized_metrics.append(norm_m)
+
     return {
         "id": data.get("id"),
         "meeting_title": clean_display_text(
             data.get("meeting_title") or _("untitled_conversation", lang)
         ),
         "meeting_date": clean_display_text(data.get("meeting_date") or ""),
-        "duration_minutes": data.get("duration_minutes"),
+        "duration_minutes": duration_mins,
         "understanding_score": data.get("understanding_score") or 0,
         "overall_sentiment": clean_display_text(data.get("overall_sentiment") or "N/A"),
-        "metrics": [
-            normalize_metric(metric, lang)
-            for metric in (data.get("metrics") or [])
-            if isinstance(metric, dict)
-        ],
+        "metrics": normalized_metrics,
         "ai_overall_feedback": clean_display_text(
             data.get("ai_overall_feedback") or ""
         ),
@@ -233,6 +251,16 @@ async def load_analysis_from_api(
 
         if not isinstance(data, dict):
             raise RuntimeError("invalid_analysis_response")
+
+        conversation_id = data.get("id")
+        if conversation_id is not None:
+            try:
+                context = await load_translate_context(conversation_id, lang)
+                messages = context.get("messages") or []
+                num_messages = len(messages)
+                data["duration_minutes"] = num_messages * 1.5
+            except Exception as e:
+                print(f"Cannot load translate context for message count: {e}")
 
         return normalize_analysis_payload(data, lang)
 
