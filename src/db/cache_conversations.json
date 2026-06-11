@@ -1,0 +1,700 @@
+{
+  "translate_contexts": {
+    "47_vn": {
+      "conversation_id": 47,
+      "conversation_name": "Cuộc hội thoại mới",
+      "messages": [
+        {
+          "id": 215,
+          "role": "listen",
+          "text": "ユーザーへの影響は大きそうですか",
+          "time": "07:44",
+          "translation": "Sự ảnh hưởng đối với người dùng có vẻ lớn như vậy không?",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 216,
+          "role": "you",
+          "text": "現在は内部のいくつかのアカウントにのみ影響しています。",
+          "time": "07:47",
+          "translation": "Hiện tại, nó chỉ ảnh hưởng đến một số tài khoản bên trong.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        }
+      ],
+      "intent_analysis": "Mục tiêu chính của cuộc hội thoại là xác định mức độ ảnh hưởng của dự án tới người dùng.",
+      "nuance_analysis": "Sắc thái giao tiếp trong cuộc hội thoại này chủ yếu là lịch sự và rõ ràng, ít hàm ý và nguy cơ hiểu lầm.",
+      "culture_explanation": "Trong văn hóa Nhật Bản, người ta thường sử dụng từ ngữ lịch sự và tránh từ chối thẳng. Trong khi đó, văn hóa Việt Nam cũng nhấn mạnh tầm quan trọng của giữ thể diện và tránh từ chối thẳng. Trong cuộc hội thoại này, cả hai bên đã sử dụng từ ngữ lịch sự và tránh từ chối thẳng, thể hiện sự tôn trọng và hiểu biết về văn hóa của nhau.",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Cần xác nhận rõ mức độ ảnh hưởng của dự án để tránh hiểu lầm",
+          "description": "Cần xác nhận rõ mức độ ảnh hưởng của dự án để tránh hiểu lầm"
+        },
+        {
+          "id": "s2",
+          "title": "Cần gửi email tóm tắt về dự án và tiến độ để tránh hiểu lầm",
+          "description": "Cần gửi email tóm tắt về dự án và tiến độ để tránh hiểu lầm"
+        }
+      ],
+      "partner_text": "ユーザーへの影響は大きそうですか",
+      "translation_text": "Hiện tại, nó chỉ ảnh hưởng đến một số tài khoản bên trong."
+    },
+    "48_vn": {
+      "conversation_id": 48,
+      "conversation_name": "新しい会話",
+      "messages": [
+        {
+          "id": 217,
+          "role": "you",
+          "text": "データベースからデータを取得し、活動の概要を表示する。",
+          "time": "07:50",
+          "translation": "Lấy dữ liệu từ cơ sở dữ liệu và hiển thị tóm tắt hoạt động.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 218,
+          "role": "you",
+          "text": "わかりません",
+          "time": "07:51",
+          "translation": "Tôi không hiểu.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 219,
+          "role": "you",
+          "text": "すみませんが、データベースが故障しているため、データを取得することができません。",
+          "time": "03:28",
+          "translation": "Xin lỗi, nhưng do cơ sở dữ liệu gặp sự cố, chúng tôi không thể lấy được dữ liệu.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        }
+      ],
+      "intent_analysis": "Mục tiêu chính của cuộc hội thoại là yêu cầu phía Việt Nam thực hiện việc lấy dữ liệu từ cơ sở dữ liệu và hiển thị thông tin về hoạt động.",
+      "nuance_analysis": "Sắc thái giao tiếp trong cuộc hội thoại này chủ yếu là rõ ràng và trực tiếp, không có dấu hiệu nói gián tiếp hoặc hàm ý văn hóa.",
+      "culture_explanation": "Không có yếu tố văn hóa hoặc giao tiếp Việt - Nhật liên quan trực tiếp trong cuộc hội thoại này.",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Hãy hỏi lại về chi tiết yêu cầu để tránh hiểu lầm.",
+          "description": "Hãy hỏi lại về chi tiết yêu cầu để tránh hiểu lầm."
+        },
+        {
+          "id": "s2",
+          "title": "Hãy xác nhận rõ ràng về yêu cầu để đảm bảo hai bên hiểu đúng.",
+          "description": "Hãy xác nhận rõ ràng về yêu cầu để đảm bảo hai bên hiểu đúng."
+        }
+      ],
+      "partner_text": "",
+      "translation_text": "Xin lỗi, nhưng do cơ sở dữ liệu gặp sự cố, chúng tôi không thể lấy được dữ liệu."
+    },
+    "45_vn": {
+      "conversation_id": 45,
+      "conversation_name": "alo",
+      "messages": [
+        {
+          "id": 208,
+          "role": "listen",
+          "text": "何言ってんのかわからなくてもかつく",
+          "time": "14:40",
+          "translation": "Không hiểu rõ bạn đang nói gì nhưng vẫn rất tự tin.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 209,
+          "role": "you",
+          "text": "すみません、答えを探します",
+          "time": "14:41",
+          "translation": "Xin lỗi, tôi đang tìm kiếm câu trả lời.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 210,
+          "role": "listen",
+          "text": "じゃあ、さっきやったことを説明してみろ。",
+          "time": "14:42",
+          "translation": "Vậy, hãy giải thích lại điều đó.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        }
+      ],
+      "intent_analysis": "Đối tác đang yêu cầu bạn giải thích lại công việc mà bạn đã thực hiện trước đó và muốn biết chi tiết về tiến độ và kết quả. Câu nói này có thể được hiểu là một cách lịch sự để yêu cầu báo cáo hoặc cập nhật tiến độ công việc.",
+      "nuance_analysis": "Sắc thái giao tiếp rõ ràng, ít hàm ý và ít nguy cơ hiểu lầm",
+      "culture_explanation": "Hội thoại chủ yếu mang tính xác nhận công việc, ít rủi ro từ khác biệt văn hóa",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Bạn có thể trả lời bằng cách giải thích rõ ràng và chi tiết về công việc đã thực",
+          "description": "Bạn có thể trả lời bằng cách giải thích rõ ràng và chi tiết về công việc đã thực hiện, bao gồm cả kết quả và tiến độ. Ví dụ: 'Tôi đã thực hiện công việc như sau: ... và kết quả là ...'. Điều này sẽ giúp đối tác hiểu rõ hơn về công việc và có thể đưa ra quyết định hoặc yêu cầu tiếp theo."
+        }
+      ],
+      "partner_text": "じゃあ、さっきやったことを説明してみろ。",
+      "translation_text": "Vậy, hãy giải thích lại điều đó."
+    },
+    "42_vn": {
+      "conversation_id": 42,
+      "conversation_name": "test 3",
+      "messages": [
+        {
+          "id": 196,
+          "role": "listen",
+          "text": "こんにちは。私はHangです。日本語についていきます。",
+          "time": "12:20",
+          "translation": "Xin chào. Tôi là Hang. Tôi sẽ nói tiếng Nhật.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 197,
+          "role": "you",
+          "text": "おはようございます。何をすればいいでしょうか。",
+          "time": "12:21",
+          "translation": "chào hằng hãy cho tôi biết  rằng tôi cần làm việc gì được không",
+          "note": "TỐI ƯU TỔNG GIỌNG: Lịch sự",
+          "tags": [
+            "Lịch sự"
+          ],
+          "is_marked": 0
+        }
+      ],
+      "intent_analysis": "Câu nói của đối tác là một cách chào hỏi và giới thiệu bản thân, đồng thời thể hiện sự sẵn sàng giao tiếp bằng tiếng Nhật. Ý định thực tế đằng sau câu nói này là tạo ra một môi trường giao tiếp thoải mái và thân thiện, đồng thời thể hiện sự tôn trọng đối với ngôn ngữ và văn hóa của đối tác.",
+      "nuance_analysis": "Sắc thái giao tiếp của Hang rõ ràng và lịch sự, không có dấu hiệu nói gián tiếp hoặc hàm ý văn hóa.",
+      "culture_explanation": "Không có yếu tố văn hóa/giao tiếp Việt - Nhật liên quan trực tiếp trong transcript.",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Phản hồi bằng tiếng Nhật hoặc tiếng Việt, thể hiện sự biết ơn và tôn trọng đối v",
+          "description": "Phản hồi bằng tiếng Nhật hoặc tiếng Việt, thể hiện sự biết ơn và tôn trọng đối với đối tác. Ví dụ: \"Xin chào Hang-san! Tôi rất hân hạnh được biết đến bạn. Tôi cũng sẵn sàng giao tiếp bằng tiếng Nhật. Hãy cho tôi biết cách tôi có thể hỗ trợ bạn.\""
+        }
+      ],
+      "partner_text": "こんにちは。私はHangです。日本語についていきます。",
+      "translation_text": "chào hằng hãy cho tôi biết  rằng tôi cần làm việc gì được không"
+    },
+    "40_vn": {
+      "conversation_id": 40,
+      "conversation_name": "test2",
+      "messages": [
+        {
+          "id": 192,
+          "role": "listen",
+          "text": "こんにちは。今日の寸法のだった",
+          "time": "10:16",
+          "translation": "Xin chào. Hôm nay tôi đã đo được kích thước.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 193,
+          "role": "you",
+          "text": "こんにちは 今日のお授業どうだった?",
+          "time": "10:17",
+          "translation": "Xin chào, hôm nay buổi học thế nào?",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 194,
+          "role": "you",
+          "text": "少し難ですが、面白いです。",
+          "time": "10:17",
+          "translation": "Câu tiếng Nhật \"少し難ですが、面白いです\" dịch sang tiếng Việt là:\n\nĐúng là hơi khó một chút, nhưng rất thú vị.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 195,
+          "role": "you",
+          "text": "何について勉強したの",
+          "time": "10:18",
+          "translation": "Về vấn đề gì bạn đã học tập?",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        }
+      ],
+      "intent_analysis": "Mục tiêu chính của cuộc hội thoại là hỏi về trải nghiệm và cảm nhận của người Nhật về bài học hôm nay.",
+      "nuance_analysis": "Sắc thái giao tiếp trong cuộc hội thoại này chủ yếu là lịch sự và thân thiện. Người Nhật sử dụng từ ngữ và cách nói gián tiếp để thể hiện cảm xúc và ý kiến của mình.",
+      "culture_explanation": "Trong văn hóa Nhật Bản, người ta thường sử dụng từ ngữ và cách nói gián tiếp để thể hiện cảm xúc và ý kiến của mình. Điều này giúp tránh gây ra sự bất đồng và giữ cho mối quan hệ thân thiện.",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Cần hỏi lại nội dung bài học để đảm bảo hai bên hiểu rõ.",
+          "description": "Cần hỏi lại nội dung bài học để đảm bảo hai bên hiểu rõ."
+        },
+        {
+          "id": "s2",
+          "title": "Cần xác nhận lại deadline và trách nhiệm của mỗi bên.",
+          "description": "Cần xác nhận lại deadline và trách nhiệm của mỗi bên."
+        }
+      ],
+      "partner_text": "こんにちは。今日の寸法のだった",
+      "translation_text": "Về vấn đề gì bạn đã học tập?"
+    },
+    "43_vn": {
+      "conversation_id": 43,
+      "conversation_name": "Cuộc hội thoại mới",
+      "messages": [
+        {
+          "id": 198,
+          "role": "listen",
+          "text": "彼はとても嫌な人です。",
+          "time": "17:32",
+          "translation": "Người này là một kẻ rất đáng ghét.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        }
+      ],
+      "intent_analysis": "Câu nói của đối tác không phải là ý kiến nghiêm túc về người đó, mà có thể là cách nói gián tiếp để thể hiện sự không hài lòng hoặc thất vọng về hành động hoặc quyết định của người đó. Đối tác có thể đang cố gắng tránh gây ra sự bất đồng hoặc tranh cãi trực tiếp.",
+      "nuance_analysis": "Hội thoại có sắc thái giao tiếp không rõ ràng, có thể có nguy cơ hiểu lầm",
+      "culture_explanation": "Hội thoại không có yếu tố văn hóa/giao tiếp Việt - Nhật liên quan trực tiếp",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Phản hồi một cách lịch sự và cởi mở như: 'Tôi hiểu rằng bạn không hài lòng về đi",
+          "description": "Phản hồi một cách lịch sự và cởi mở như: 'Tôi hiểu rằng bạn không hài lòng về điều đó. Tôi sẵn sàng thảo luận và tìm ra giải pháp tốt hơn. Hãy cho tôi biết cách tôi có thể giúp đỡ.'"
+        }
+      ],
+      "partner_text": "彼はとても嫌な人です。",
+      "translation_text": "Người này là một kẻ rất đáng ghét."
+    },
+    "32_vn": {
+      "conversation_id": 32,
+      "conversation_name": "trao đổi với sato san",
+      "messages": [
+        {
+          "id": 134,
+          "role": "listen",
+          "text": "Anhさん、昨日デモを確認しました。全体的には良いと思いますが、AIがその返答を提案した理由の説明が少し短いと感じました。",
+          "time": "12:28",
+          "translation": "Anh ấy đã kiểm tra buổi biểu tình hôm qua. Tất cả đều ổn, nhưng anh ấy cảm thấy lý do mà AI đưa ra trả lời hơi ngắn.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 135,
+          "role": "you",
+          "text": "ああ、それですか。僕はもう大丈夫だと思いますよ。ユーザーはたぶん返事だけ見たいので、説明が長いと逆に面倒かなと思います。",
+          "time": "12:29",
+          "translation": "À, đó đúng không? Tôi nghĩ mình đã ổn rồi. Người dùng có lẽ chỉ muốn xem phản hồi thôi, nếu có quá nhiều lời giải thích thì có thể sẽ gây phiền toái.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 136,
+          "role": "listen",
+          "text": "おっしゃることは分かります。ただ、このアプリは日本の職場で働くベトナム人向けなので、返答だけでなく、その表現のニュアンスも説明した方が良いと思います。",
+          "time": "12:30",
+          "translation": "Tôi hiểu câu đó. Tuy nhiên, câu tiếng Nhật cần dịch như sau:\n\nTôi hiểu những gì bạn nói. Tuy nhiên, vì ứng dụng này là dành cho người Việt Nam làm việc tại Nhật Bản, nên ngoài việc trả lời, tôi cũng nên giải thích thêm về cách sử dụng và ý nghĩa của từng từ.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 137,
+          "role": "you",
+          "text": "うーん、でも説明を追加するとちょっと面倒ですね。バックエンドもプロンプトを直さないといけないし、フロントも表示ボックスを増やさないといけません。",
+          "time": "12:31",
+          "translation": "À, nhưng nếu thêm vào phần giải thích thì sẽ hơi phức tạp đấy. Backend cũng phải chỉnh sửa Promt, còn Frontend thì không thể không tăng số lượng hộp hiển thị được.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 138,
+          "role": "listen",
+          "text": "確かに工数は増えると思います。しかし、この機能は重要だと思います。たとえば、ユーザーが依頼を断りたい場合、AIは返答だけでなく、その表現が丁寧かどうかも説明するべきです。",
+          "time": "12:32",
+          "translation": "Thật vậy, số lượng công việc sẽ tăng lên. Nhưng tôi nghĩ chức năng này quan trọng. Ví dụ, nếu người dùng muốn từ chối yêu cầu, AI không chỉ trả lời mà còn cần giải thích xem cách thể hiện của nó có lịch sự hay không.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 139,
+          "role": "you",
+          "text": "ああ、それはそうですね。でも簡単にやればいいんじゃないですか。「この表現は丁寧です」みたいに一行入れれば十分だと思います。",
+          "time": "12:33",
+          "translation": "Đúng vậy, như vậy thôi. Nhưng có lẽ dễ dàng hơn phải không? Chỉ cần thêm một dòng như \"Đây là một cách nói lịch sự\" là đủ rồi.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 140,
+          "role": "listen",
+          "text": "一行だけですと、少し不十分かもしれません。たとえば、「この表現は直接的に断らず、やわらかい言い方になっているため、ビジネス場面に適しています」のように説明した方が良いと思います。",
+          "time": "12:34",
+          "translation": "Một câu đơn giản có thể không đủ. Ví dụ, \"Câu này không trực tiếp từ chối, mà lại mềm mại nên phù hợp với môi trường kinh doanh.\"",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 141,
+          "role": "you",
+          "text": "ああ、つまり文化の説明も入れる感じですよね。日本人ははっきり言われるのがあまり好きじゃない、みたいなことですか。",
+          "time": "12:35",
+          "translation": "Ào, vậy thì có nghĩa là sẽ thêm phần giải thích về văn hóa vào đó chứ. Người Nhật thường không thích được nói rõ ràng như vậy, đúng không?",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 142,
+          "role": "listen",
+          "text": "はい、方向性としては近いです。ただし、「日本人は好きじゃない」という表現は少し強いかもしれません。「日本の職場では、状況によって間接的な表現が丁寧に受け取られやすい」と書いた方が良いです。",
+          "time": "12:36",
+          "translation": "Đúng, về mặt định hướng thì gần như vậy. Tuy nhiên, biểu hiện \"Nhật Bản là một quốc gia mà tôi không thích\" có thể hơi mạnh. \"Ở Nhật Bản, trong môi trường làm việc, có thể sẽ dễ dàng hiểu được các biểu hiện gián tiếp tùy thuộc vào tình huống\" sẽ tốt hơn.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 143,
+          "role": "you",
+          "text": "なるほど、分かりました。じゃあ、その部分は僕がプロンプトを直します。でもフロントの画面、ちょっと微妙なので、そちらで確認してください。",
+          "time": "12:37",
+          "translation": "Tôi hiểu rồi. Dưới đây là bản dịch tiếng Việt:\n\nAh, tôi hiểu rồi. Vậy, tôi sẽ sửa đổi phần đó. Tuy nhiên, màn hình phía trước có vẻ hơi khác biệt một chút, bạn hãy kiểm tra lại ở đó nhé.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 144,
+          "role": "listen",
+          "text": "承知しました。フロント担当にも確認します。ただ、「微妙」というのは、具体的にどの部分でしょうか。",
+          "time": "12:38",
+          "translation": "Tôi đã hiểu. Tôi sẽ hỏi lại với người phụ trách mặt tiền và xác nhận lại. Tuy nhiên, \"mĩ mị\" trong trường hợp này có nghĩa là gì cụ thể?",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 145,
+          "role": "you",
+          "text": "えっと、見た目がちょっとつまらないというか、文字が多くて、どこが大事なのか分かりにくいです。",
+          "time": "12:39",
+          "translation": "Tôi không thấy câu tiếng Nhật cần dịch. Vui lòng cung cấp câu tiếng Nhật cần dịch.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 146,
+          "role": "listen",
+          "text": "なるほど。つまり、UIが少し直感的ではなく、重要な情報が目立っていないということですね。",
+          "time": "12:40",
+          "translation": "Tôi hiểu rồi. Dưới đây là bản dịch tiếng Việt:\n\nAh, vậy nghĩa là UI không trực quan và thông tin quan trọng không dễ dàng nhận thấy.",
+          "note": null,
+          "tags": [],
+          "is_marked": 1
+        },
+        {
+          "id": 147,
+          "role": "you",
+          "text": "はい、そういうことです。ユーザーが見た瞬間に、どの返答を使えばいいか分かるようにしたいです。",
+          "time": "12:41",
+          "translation": "Tôi hiểu như vậy. Dưới đây là bản dịch tiếng Việt:\n\nVâng, như vậy thôi. Tôi muốn người dùng có thể biết được nên sử dụng trả lời nào ngay khi họ nhìn thấy nó.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 148,
+          "role": "listen",
+          "text": "分かりました。もう一点確認したいのですが、AIの処理結果はai_logテーブルに保存されますか。",
+          "time": "12:42",
+          "translation": "Tôi đã hiểu. Tôi muốn hỏi thêm một chút, nhưng tôi muốn biết chắc chắn rằng kết quả xử lý của AI được lưu trữ trong bảng ai_log không phải là gì.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 149,
+          "role": "you",
+          "text": "はい、保存します。AIが特定のメッセージを処理した場合はmessage_idを入れます。会話全体を要約する場合はmessage_idをNULLにします。",
+          "time": "12:43",
+          "translation": "Có, sẽ lưu trữ. Nếu AI xử lý một thông điệp cụ thể, sẽ thêm message_id vào. Nếu sẽ tóm tắt toàn bộ cuộc trò chuyện, sẽ đặt message_id thành NULL.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 150,
+          "role": "listen",
+          "text": "ありがとうございます。では、返答提案の機能の場合、ai_task_typeはREPLY_SUGGESTIONになりますね。",
+          "time": "12:44",
+          "translation": "Cảm ơn bạn. Trong trường hợp này, ai_task_type sẽ là REPLY_SUGGESTION.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 151,
+          "role": "you",
+          "text": "はい、そうです。そこはもう作ってあるので、大丈夫だと思います。",
+          "time": "12:45",
+          "translation": "Tôi hiểu, đó là câu tiếng Nhật. Dưới đây là bản dịch tiếng Việt:\n\nVâng, đúng vậy. Đó đã được làm sẵn rồi, tôi nghĩ mọi thứ sẽ ổn.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 152,
+          "role": "listen",
+          "text": "承知しました。マージする前に、一度こちらでも確認したいので、プルリクエストを共有していただけますか。",
+          "time": "12:46",
+          "translation": "Tôi đã hiểu. Tôi muốn trước khi thực hiện việc hợp nhất, tôi muốn kiểm tra lại ở đây một lần nữa, có thể bạn chia sẻ yêu cầu pull request với tôi được không?",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 153,
+          "role": "you",
+          "text": "はい、あとで送ります。たぶん問題ないと思いますが、一応見てください。",
+          "time": "12:47",
+          "translation": "Tôi sẽ gửi nó sau, nhưng tốt nhất bạn nên xem qua một lần.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 154,
+          "role": "listen",
+          "text": "ありがとうございます。可能であれば、プルリクエストの説明欄に変更点も記載していただけると助かります。",
+          "time": "12:48",
+          "translation": "Cảm ơn! Nếu có thể, xin hãy ghi chú về thay đổi trong phần mô tả của pull request.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 155,
+          "role": "you",
+          "text": "はい、書きます。でも短くでいいですよね。タスクが多いので。",
+          "time": "12:49",
+          "translation": "Đúng, tôi sẽ viết. Nhưng hãy viết ngắn gọn đi, vì tôi có nhiều việc phải làm.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 156,
+          "role": "listen",
+          "text": "はい、主な変更点だけで大丈夫です。たとえば、プロンプト修正、ニュアンス説明の追加、ai_logへの保存処理などです。",
+          "time": "12:50",
+          "translation": "Tôi hiểu. Dưới đây là bản dịch tiếng Việt:\n\nHai, chỉ cần thay đổi chính là đủ. Ví dụ như sửa lỗi trong câu hỏi, thêm giải thích về ngữ điệu, lưu trữ dữ liệu vào ai_log,...",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        },
+        {
+          "id": 157,
+          "role": "you",
+          "text": "了解です。じゃあ、そこまでやっておきます。",
+          "time": "12:51",
+          "translation": "Tôi hiểu. Vậy thì tôi sẽ dừng lại ở đó.",
+          "note": null,
+          "tags": [],
+          "is_marked": 0
+        }
+      ],
+      "intent_analysis": "Đối tác đang thể hiện sự do dự và không chắc chắn về tính đầy đủ của thông tin được cung cấp. Họ đang cố gắng tránh nói thẳng và trực tiếp, thay vào đó sử dụng cách nói gián tiếp để thể hiện sự tôn trọng và lịch sự. Ý định thực tế đằng sau câu nói này là muốn có thêm thông tin hoặc giải thích chi tiết hơn về vấn đề đang được thảo luận.",
+      "nuance_analysis": "Sắc thái giao tiếp trong cuộc hội thoại này chủ yếu là lịch sự và tôn trọng, nhưng có một số điểm cần lưu ý. Người Nhật có thể hiểu rằng việc thêm mô tả về ngữ cảnh văn hóa là quan trọng, nhưng người Việt Nam có thể hiểu rằng việc thêm mô tả này có thể làm tăng công sức và phức tạp hóa quy trình. Ngoài ra, người Nhật có thể hiểu rằng việc tránh hiểu lầm là quan trọng, nhưng người Việt Nam có thể hiểu rằng việc tránh hiểu lầm có thể dẫn đến việc không rõ ràng và thiếu minh bạch.",
+      "culture_explanation": "Yếu tố văn hóa liên quan trong cuộc hội thoại này là sự khác biệt trong cách tiếp cận về ngữ cảnh văn hóa và tránh hiểu lầm giữa người Việt Nam và người Nhật. Người Nhật có thể hiểu rằng việc thêm mô tả về ngữ cảnh văn hóa là quan trọng để tránh hiểu lầm, trong khi người Việt Nam có thể hiểu rằng việc thêm mô tả này có thể làm tăng công sức và phức tạp hóa quy trình.",
+      "reply_suggestions": [
+        {
+          "id": "s1",
+          "title": "Bạn có thể phản hồi bằng cách nói rõ ràng và trực tiếp về thông tin được yêu cầu",
+          "description": "Bạn có thể phản hồi bằng cách nói rõ ràng và trực tiếp về thông tin được yêu cầu, đồng thời thể hiện sự tôn trọng và hiểu biết về cách nói gián tiếp của đối tác. Ví dụ: 'Tôi hiểu rằng bạn muốn có thêm thông tin về vấn đề này. Tôi sẽ cố gắng giải thích rõ ràng và chi tiết hơn về vấn đề đang được thảo luận.'"
+        }
+      ],
+      "partner_text": "はい、主な変更点だけで大丈夫です。たとえば、プロンプト修正、ニュアンス説明の追加、ai_logへの保存処理などです。",
+      "translation_text": "Tôi hiểu. Vậy thì tôi sẽ dừng lại ở đó."
+    },
+    "30_vn": {
+      "conversation_id": 30,
+      "conversation_name": "Tanaka-san",
+      "messages": [],
+      "intent_analysis": "",
+      "nuance_analysis": "",
+      "culture_explanation": "",
+      "reply_suggestions": [],
+      "partner_text": "",
+      "translation_text": ""
+    }
+  },
+  "conversations_list": [
+    {
+      "id": 48,
+      "label": "新しい会話",
+      "subtitle": "04/06/2026"
+    },
+    {
+      "id": 47,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "04/06/2026"
+    },
+    {
+      "id": 46,
+      "label": "Hội thoại siêu cấp của HDA",
+      "subtitle": "02/06/2026"
+    },
+    {
+      "id": 45,
+      "label": "alo",
+      "subtitle": "02/06/2026"
+    },
+    {
+      "id": 44,
+      "label": "Test with pot team",
+      "subtitle": "02/06/2026"
+    },
+    {
+      "id": 43,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "01/06/2026"
+    },
+    {
+      "id": 42,
+      "label": "test 3",
+      "subtitle": "30/05/2026"
+    },
+    {
+      "id": 41,
+      "label": "新しい会話",
+      "subtitle": "28/05/2026"
+    },
+    {
+      "id": 40,
+      "label": "test2",
+      "subtitle": "28/05/2026"
+    },
+    {
+      "id": 39,
+      "label": "新しい会話",
+      "subtitle": "28/05/2026"
+    },
+    {
+      "id": 38,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "28/05/2026"
+    },
+    {
+      "id": 37,
+      "label": "新しい会話",
+      "subtitle": "28/05/2026"
+    },
+    {
+      "id": 36,
+      "label": "test1",
+      "subtitle": "28/05/2026"
+    },
+    {
+      "id": 35,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "28/05/2026"
+    },
+    {
+      "id": 34,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "28/05/2026"
+    },
+    {
+      "id": 33,
+      "label": "test",
+      "subtitle": "26/05/2026"
+    },
+    {
+      "id": 32,
+      "label": "trao đổi với sato san",
+      "subtitle": "25/05/2026"
+    },
+    {
+      "id": 31,
+      "label": "minasan",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 30,
+      "label": "Tanaka-san",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 29,
+      "label": "TestRename",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 28,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 27,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 26,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 25,
+      "label": "Test",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 24,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 23,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 22,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 21,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 20,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "24/05/2026"
+    },
+    {
+      "id": 19,
+      "label": "Cuộc hội thoại mới",
+      "subtitle": "24/05/2026"
+    }
+  ]
+}

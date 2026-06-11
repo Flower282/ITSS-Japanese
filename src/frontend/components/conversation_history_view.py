@@ -24,16 +24,18 @@ def conversation_history_view(
 
     with container:
         ui.label(title).classes("text-sm font-semibold text-slate-700 mb-3")
-        scroll = ui.column().classes("gap-3 overflow-y-auto pr-1 w-full")
+        scroll = ui.column().classes("gap-3 overflow-y-auto pr-1 w-full").style(
+            "display: flex; flex-direction: column-reverse;"
+        )
         if max_height:
-            scroll.style(f"max-height: {max_height};")
+            scroll.style(f"max-height: {max_height}; display: flex; flex-direction: column-reverse;")
 
         with scroll:
             if not messages:
                 ui.label("Chưa có tin nhắn trong hội thoại này.").classes(
                     "text-xs text-slate-500"
                 )
-            for message in messages:
+            for message in reversed(messages):
                 role = message.get("role", "you")
                 is_listen = role == "listen"
                 card_classes = (

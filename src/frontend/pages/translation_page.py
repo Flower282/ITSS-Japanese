@@ -93,12 +93,20 @@ def translation_page(conversation_id: int | None = None) -> None:
             state["selected_tones"],
         )
 
-    def set_loading(visible: bool) -> None:
+    def set_loading(visible: bool, hide_content: bool = True) -> None:
         with client:
             if refs.get("loading_box"):
-                refs["loading_box"].set_visibility(visible)
+                refs["loading_box"].set_visibility(visible if hide_content else False)
             if refs.get("main_content"):
-                refs["main_content"].set_visibility(not visible)
+                if hide_content:
+                    refs["main_content"].set_visibility(not visible)
+                    refs["main_content"].style("opacity: 1.0; pointer-events: auto;")
+                else:
+                    refs["main_content"].set_visibility(True)
+                    if visible:
+                        refs["main_content"].style("opacity: 0.5; pointer-events: none;")
+                    else:
+                        refs["main_content"].style("opacity: 1.0; pointer-events: auto;")
 
     def update_panel_labels() -> None:
         panels = state.get("panels", {})
@@ -203,6 +211,7 @@ def translation_page(conversation_id: int | None = None) -> None:
             state["messages"] = []
             sync_panels_from_context()
             render_history()
+            refresh_sidebar()
             return
         ctx = await load_translate_context(int(conv_id), lang)
         state["context"] = ctx
@@ -213,6 +222,7 @@ def translation_page(conversation_id: int | None = None) -> None:
         set_title_value(ctx.get("conversation_name", ""))
         sync_panels_from_context()
         render_history()
+        refresh_sidebar()
 
     def refresh_sidebar() -> None:
         with client:
@@ -317,9 +327,10 @@ def translation_page(conversation_id: int | None = None) -> None:
             toast(_("empty_input_warn", lang), type="warning")
             return
         try:
-            await ensure_conversation_id()
+            conv_id = await ensure_conversation_id()
+            if conv_id is not None:
+                layout_state.selected_history_id = conv_id
             await sync_history_from_db()
-            layout_state.selected_history_id = state["conversation_id"]
             toast(_("save_conv", lang), type="positive")
         except Exception as exc:
             toast(str(exc), type="negative")
@@ -530,12 +541,12 @@ def translation_page(conversation_id: int | None = None) -> None:
     async def handle_history_select(selected_id: str | int) -> None:
         state["conversation_id"] = int(selected_id)
         layout_state.selected_history_id = int(selected_id)
-        set_loading(True)
+        set_loading(True, hide_content=False)
         try:
             await reload_context()
         except Exception as exc:
             toast(str(exc), type="negative")
-        set_loading(False)
+        set_loading(False, hide_content=False)
 
     async def handle_search(keyword: str) -> None:
         keyword = (keyword or "").strip()
