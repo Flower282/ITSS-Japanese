@@ -433,15 +433,15 @@ def translation_page(conversation_id: int | None = None) -> None:
                 timeout=120.0,
             )
             if not result or not result.get("ok"):
-                toast((result or {}).get("error", "Ghi âm thất bại"), type="negative")
+                toast((result or {}).get("error", _("recording_failed", lang)), type="negative")
                 return
 
             try:
-                toast("Đang xử lý giọng nói tiếng Nhật...", type="info")
+                toast(_("processing_japanese_voice", lang), type="info")
                 audio_bytes = base64.b64decode(result["base64"])
                 data = await api_post_form(
                     "/api/v1/translate/audio",
-                    {"context": tone_context(), "direction": "ja-to-vi"},
+                    {"context": tone_context(), "direction": "ja-to-ja-simple"},
                     {
                         "audio": (
                             result.get("filename", "record.webm"),
@@ -452,32 +452,27 @@ def translation_page(conversation_id: int | None = None) -> None:
                 )
                 japanese_raw = (data.get("transcript") or "").strip()
                 if not japanese_raw:
-                    toast("Không nhận diện được tiếng Nhật từ audio", type="warning")
+                    toast(_("audio_not_recognized", lang), type="warning")
                     return
 
-                simplified = await translate_text(
-                    japanese_raw,
-                    context=tone_context(),
-                    direction="ja-to-ja-simple",
-                )
-                japanese_n45 = (simplified.get("translation") or "").strip() or japanese_raw
+                japanese_n45 = (data.get("translation") or "").strip() or japanese_raw
                 with client:
                     inp = refs.get("draft_input")
                     if inp:
                         inp.value = japanese_n45
-                warning = simplified.get("warning")
+                warning = data.get("warning")
                 if warning:
                     toast(str(warning), type="warning")
-                toast("Đã đưa câu tiếng Nhật N4/N5 vào ô nhập", type="positive")
+                toast(_("simplified_japanese_inserted", lang), type="positive")
             except Exception as exc:
-                toast(f"Ghi âm tiếng Nhật thất bại: {exc}", type="negative")
+                toast(f"{_('japanese_recording_failed', lang)}: {exc}", type="negative")
         else:
             init = await ui.run_javascript("return await startRecording()")
             if not init or not init.get("ok"):
-                toast((init or {}).get("error", "Không thể truy cập micro"), type="negative")
+                toast((init or {}).get("error", _("cannot_access_microphone", lang)), type="negative")
                 return
             state["you_recording"] = True
-            toast("Đang ghi âm tiếng Nhật cho phần Bạn muốn nói gì...", type="info")
+            toast(_("recording_japanese_prompt", lang), type="info")
 
     async def handle_partner_voice() -> None:
         if state["partner_recording"]:

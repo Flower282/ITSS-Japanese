@@ -267,7 +267,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         'loading': '読み込み中...',
         'detecting_language': '言語を検出中...',
         'search_placeholder': '会話・分析・文化を検索...',
-        'user_subtitle': 'ベトナム人ユーザー',
+        'user_subtitle': '日本人ユーザー',
 
         # Form labels
         'name': '名前',
