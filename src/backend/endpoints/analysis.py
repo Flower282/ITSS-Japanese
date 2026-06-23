@@ -1196,19 +1196,11 @@ async def ensure_analysis_exists(conversation_id: int) -> AnalysisResponse:
             conversation.conversation_id,
         )
 
-        if has_full_analysis(logs):
-            return build_analysis_from_db(
-                conversation=conversation,
-                messages=messages,
-                logs=logs,
-            )
-
-    result = await run_conversation_analysis(
-        conversation_id=conversation_id,
-        replace_existing=True,
-    )
-
-    return result.analysis
+        return build_analysis_from_db(
+            conversation=conversation,
+            messages=messages,
+            logs=logs,
+        )
 
 
 @router.get("/latest/ensure", response_model=AnalysisResponse)
@@ -1738,6 +1730,17 @@ def add_conversation_message(
 
         if message.message_id is None:
             raise HTTPException(status_code=500, detail="Could not save message")
+
+        if body.translation and message.user_id is None:
+            translation_log = AnalysisLog(
+                message_id=message.message_id,
+                conversation_id=conversation_id,
+                ai_task_type="TRANSLATION",
+                output_text=body.translation.strip(),
+                created_at=datetime.utcnow(),
+            )
+            session.add(translation_log)
+            session.commit()
 
         invalidate_conversation(conversation_id)
 

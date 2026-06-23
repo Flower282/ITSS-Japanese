@@ -131,11 +131,24 @@ def dashboard_page() -> None:
                     )
 
     async def load_page_data() -> None:
-        page_state["loading"] = True
-        content.refresh()
+        cache_key = f"dashboard_data_{lang}"
+        cached = app.storage.user.get(cache_key)
+        if cached:
+            page_state["history_items"] = cached.get("history_items", [])
+            page_state["overview"] = cached.get("overview", {})
+            page_state["loading"] = False
+            content.refresh()
+        else:
+            page_state["loading"] = True
+            content.refresh()
+
         try:
             page_state["history_items"] = await load_conversation_history()
             page_state["overview"] = await load_dashboard_overview(lang)
+            app.storage.user[cache_key] = {
+                "history_items": page_state["history_items"],
+                "overview": page_state["overview"],
+            }
         except Exception as exc:
             ui.notify(f"{_('failed_analysis_load', lang)}: {exc}", type="negative")
             page_state["overview"] = {

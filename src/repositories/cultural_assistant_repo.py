@@ -147,10 +147,10 @@ Cấu trúc JSON bắt buộc:
         
     return {"category": "GIAO TIẾP GIÁN TIẾP", "intent_analysis": None, "reply_suggestion": None}
 
-def get_marked_messages_with_analysis(db: Session) -> List[dict]:
+def get_marked_messages_with_analysis(db: Session, force_generate: bool = False) -> List[dict]:
     """
     Fetch all marked messages. If they don't have CATEGORY, INTENT_ANALYSIS or REPLY_SUGGESTION logs,
-    dynamically generate them using Groq and save to DB, then return.
+    dynamically generate them using Groq and save to DB if force_generate is True, then return.
     """
     marked_msgs = get_marked_messages(db)
     results = []
@@ -170,17 +170,22 @@ def get_marked_messages_with_analysis(db: Session) -> List[dict]:
         intent_val = intent_log.output_text if intent_log else None
         reply_val = reply_log.output_text if reply_log else None
         
-        # If any log is missing, trigger Groq dynamic generation!
+        # If any log is missing, trigger Groq dynamic generation only if forced
         if not category_val or not intent_val or not reply_val:
-            generated = generate_message_analysis_with_groq(
-                db=db,
-                message_id=msg.message_id,
-                text=msg.text,
-                conversation_id=msg.conversation_id
-            )
-            category_val = category_val or generated.get("category")
-            intent_val = intent_val or generated.get("intent_analysis")
-            reply_val = reply_val or generated.get("reply_suggestion")
+            if force_generate:
+                generated = generate_message_analysis_with_groq(
+                    db=db,
+                    message_id=msg.message_id,
+                    text=msg.text,
+                    conversation_id=msg.conversation_id
+                )
+                category_val = category_val or generated.get("category")
+                intent_val = intent_val or generated.get("intent_analysis")
+                reply_val = reply_val or generated.get("reply_suggestion")
+            else:
+                category_val = category_val or "Đang chờ phân tích..."
+                intent_val = intent_val or "Vui lòng bấm 'Cập nhật từ hội thoại' để phân tích."
+                reply_val = reply_val or "..."
             
         # Clean up JSON list if reply_val is stored as list JSON
         if reply_val:

@@ -6,7 +6,7 @@ import unicodedata
 from typing import Any
 from urllib.parse import urlencode
 
-from nicegui import ui
+from nicegui import ui, app
 
 from src.frontend.api_client import api_get
 from src.frontend.components.components import action_button
@@ -512,19 +512,35 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
     }
 
     async def load_data() -> None:
-        state["loading"] = True
-        page_shell.refresh()
+        active_id = state.get("active_analysis_id")
+        cache_key = f"analysis_{active_id}_{state['lang']}" if active_id else f"analysis_latest_{state['lang']}"
+        cached_data = app.storage.user.get(cache_key)
+
+        if cached_data:
+            state["data"] = cached_data
+            state["loading"] = False
+            page_shell.refresh()
+        else:
+            state["loading"] = True
+            page_shell.refresh()
 
         try:
             state["history_items"] = await load_conversation_history()
         except Exception:
             state["history_items"] = []
 
-        state["data"] = await load_analysis_from_api(
-            state.get("active_analysis_id"),
+        fetched_data = await load_analysis_from_api(
+            active_id,
             state["lang"],
         )
-        current_id = state["data"].get("id")
+        state["data"] = fetched_data
+
+        current_id = fetched_data.get("id")
+        if current_id:
+            app.storage.user[f"analysis_{current_id}_{state['lang']}"] = fetched_data
+            if not active_id:
+                app.storage.user[f"analysis_latest_{state['lang']}"] = fetched_data
+
         state["active_analysis_id"] = current_id
         layout_state.selected_history_id = current_id
         if current_id and not any(
@@ -649,6 +665,25 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
                 f'window.open("{API_BASE_URL}/analysis/{current_id}/export-pdf?{query}", "_blank")'
             )
 
+        async def handle_refresh() -> None:
+            if not current_id:
+                ui.notify("Không có dữ liệu để cập nhật", type="warning")
+                return
+            ui.notify("Đang cập nhật phân tích, vui lòng chờ...", type="info")
+            try:
+                from src.frontend.services.conversation_service import run_analysis
+                await run_analysis(current_id)
+                ui.notify("Đã cập nhật phân tích thành công", type="positive")
+                
+                # Clear client-side cache
+                cache_key = f"analysis_{current_id}_{state['lang']}"
+                if cache_key in app.storage.user:
+                    del app.storage.user[cache_key]
+                
+                await load_data()
+            except Exception as e:
+                ui.notify(f"Lỗi khi cập nhật: {e}", type="negative")
+
         with ui.column().classes("w-full max-w-[1180px] mx-auto gap-5"):
             if search_query:
                 with ui.element("div").classes(
@@ -686,12 +721,18 @@ def render_analysis_page(analysis_id: int | None = None) -> None:
                         f"text-sm {jp_weight(state['lang'], 'font-semibold', 'font-medium')} text-slate-500",
                     )
 
-                action_button(
-                    label=_('export_pdf', state["lang"]),
-                    icon="download",
-                    variant="primary",
-                    on_click=handle_export,
-                )
+                with ui.row().classes("gap-2"):
+                    action_button(
+                        label="CẬP NHẬT",
+                        icon="sync",
+                        on_click=lambda: asyncio.create_task(handle_refresh()),
+                    )
+                    action_button(
+                        label=_('export_pdf', state["lang"]),
+                        icon="download",
+                        variant="primary",
+                        on_click=handle_export,
+                    )
 
             with ui.row().classes("hidden"):
                 search_box = (

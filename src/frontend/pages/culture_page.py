@@ -4,7 +4,7 @@ import asyncio
 from typing import Any
 from urllib.parse import urlencode
 
-from nicegui import ui
+from nicegui import ui, app
 
 from src.core.i18n import _, get_user_language, nav, validate_language_or_default
 from src.frontend.api_client import api_get
@@ -456,7 +456,7 @@ def culture_page() -> None:
             
             def fetch_db():
                 with get_db_context() as db:
-                    scenarios_data = get_marked_messages_with_analysis(db)
+                    scenarios_data = get_marked_messages_with_analysis(db, force_generate=force_refresh)
                     insight_text = get_culture_assistant_insight(db, lang, force_refresh=force_refresh)
                     r_text = None
                     if force_refresh:
@@ -502,57 +502,26 @@ def culture_page() -> None:
                     }
                 ]
                 scenarios = []
-                num_scenarios = max(2, len(marked_scenarios_data))
-                for i in range(num_scenarios):
+                for i, data in enumerate(marked_scenarios_data):
                     idx = i + 1
-                    has_data = i < len(marked_scenarios_data)
-                    
-                    phrase_val = marked_scenarios_data[i]["phrase"] if has_data else None
-                    meaning_val = marked_scenarios_data[i]["meaning"] if has_data else None
-                    response_val = marked_scenarios_data[i]["response"] if has_data else None
-                    category_val = marked_scenarios_data[i]["category"] if has_data else None
+                    category_val = data.get("category")
 
-                    if has_data and category_val == "QUẢN LÝ THỜI GIAN":
+                    if category_val == "QUẢN LÝ THỜI GIAN" or category_val == "時間管理":
                         category = "時間管理"
                         accent_classes = "border-rose-100 bg-rose-50/60"
-                    elif has_data and category_val == "GIAO TIẾP GIÁN TIẾP":
+                    elif category_val == "GIAO TIẾP GIÁN TIẾP" or category_val == "間接的なコミュニケーション":
                         category = "間接的なコミュニケーション"
                         accent_classes = "border-amber-100 bg-amber-50/70"
                     else:
-                        if idx == 1:
-                            category = "間接的なコミュニケーション"
-                            accent_classes = "border-amber-100 bg-amber-50/70"
-                        else:
-                            category = "時間管理"
-                            accent_classes = "border-rose-100 bg-rose-50/60"
-
-                    phrase = phrase_val
-                    if not phrase:
-                        if idx == 1:
-                            phrase = '相手が言いました: "ちょっと考えさせてください"'
-                        else:
-                            phrase = '"なるべく早く" というデッドラインが設定された'
-
-                    meaning = meaning_val
-                    if not meaning:
-                        if idx == 1:
-                            meaning = "これは多くの場合、時間が必要なのではなく、丁寧な断り方です。"
-                        else:
-                            meaning = "日本の仕事文化では、これは通常「今すぐ」、最優先事項を意味します。"
-                            
-                    response = response_val
-                    if not response:
-                        if idx == 1:
-                            response = "代替案を準備するか、現在の懸念事項について穏やかに尋ねる。"
-                        else:
-                            response = "すぐに取り掛かるか、具体的な完了時間を報告する。"
+                        category = category_val or "間接的なコミュニケーション"
+                        accent_classes = "border-amber-100 bg-amber-50/70"
 
                     scenarios.append({
                         "index": idx,
                         "category": category,
-                        "phrase": phrase,
-                        "meaning": meaning,
-                        "response": response,
+                        "phrase": data.get("phrase", ""),
+                        "meaning": data.get("meaning", ""),
+                        "response": data.get("response", ""),
                         "accent_classes": accent_classes,
                     })
             else:
@@ -591,57 +560,26 @@ def culture_page() -> None:
                     },
                 ]
                 scenarios = []
-                num_scenarios = max(2, len(marked_scenarios_data))
-                for i in range(num_scenarios):
+                for i, data in enumerate(marked_scenarios_data):
                     idx = i + 1
-                    has_data = i < len(marked_scenarios_data)
-                    
-                    phrase_val = marked_scenarios_data[i]["phrase"] if has_data else None
-                    meaning_val = marked_scenarios_data[i]["meaning"] if has_data else None
-                    response_val = marked_scenarios_data[i]["response"] if has_data else None
-                    category_val = marked_scenarios_data[i]["category"] if has_data else None
+                    category_val = data.get("category")
 
-                    if has_data and category_val == "QUẢN LÝ THỜI GIAN":
+                    if category_val == "QUẢN LÝ THỜI GIAN" or category_val == "時間管理":
                         category = "QUẢN LÝ THỜI GIAN"
                         accent_classes = "border-rose-100 bg-rose-50/60"
-                    elif has_data and category_val == "GIAO TIẾP GIÁN TIẾP":
+                    elif category_val == "GIAO TIẾP GIÁN TIẾP" or category_val == "間接的なコミュニケーション":
                         category = "GIAO TIẾP GIÁN TIẾP"
                         accent_classes = "border-amber-100 bg-amber-50/70"
                     else:
-                        if idx == 1:
-                            category = "GIAO TIẾP GIÁN TIẾP"
-                            accent_classes = "border-amber-100 bg-amber-50/70"
-                        else:
-                            category = "QUẢN LÝ THỜI GIAN"
-                            accent_classes = "border-rose-100 bg-rose-50/60"
-
-                    phrase = phrase_val
-                    if not phrase:
-                        if idx == 1:
-                            phrase = 'Đối tác nói: "Chotto kangaesete kudasai" (Để tôi suy nghĩ một chút)'
-                        else:
-                            phrase = 'Deadline được đưa ra "narubeku hayaku" (Càng sớm càng tốt)'
-
-                    meaning = meaning_val
-                    if not meaning:
-                        if idx == 1:
-                            meaning = "Đây thường là cách từ chối lịch sự, không phải thực sự cần thêm thời gian suy nghĩ."
-                        else:
-                            meaning = "Trong văn hóa làm việc Nhật, đây thường có nghĩa là NGAY LẬP TỨC, ưu tiên cao nhất."
-                            
-                    response = response_val
-                    if not response:
-                        if idx == 1:
-                            response = "Nên chuẩn bị phương án thay thế hoặc nhẹ nhàng hỏi về các vướng mắc hiện tại."
-                        else:
-                            response = "Cần bắt tay vào làm ngay hoặc báo cáo thời gian hoàn thành cụ thể."
+                        category = category_val or "GIAO TIẾP GIÁN TIẾP"
+                        accent_classes = "border-amber-100 bg-amber-50/70"
 
                     scenarios.append({
                         "index": idx,
                         "category": category,
-                        "phrase": phrase,
-                        "meaning": meaning,
-                        "response": response,
+                        "phrase": data.get("phrase", ""),
+                        "meaning": data.get("meaning", ""),
+                        "response": data.get("response", ""),
                         "accent_classes": accent_classes,
                     })
 
